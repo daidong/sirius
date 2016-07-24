@@ -3,7 +3,7 @@ package edu.ttu.discl.iogp.gserver.vertexcut;
 import edu.ttu.discl.iogp.gserver.AbstractSrv;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
 import edu.ttu.discl.iogp.utils.GLogger;
-import edu.ttu.discl.iogp.utils.HashKeyLocation;
+import edu.ttu.discl.iogp.utils.JenkinsHash;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.server.TServer;
@@ -18,21 +18,12 @@ public class VertexCutSrv extends AbstractSrv {
 
     public VertexCutSrv() {
         super();
-        VertexCutHandler handler = new VertexCutHandler(this);
-        this.handler = handler;
+        this.handler = new VertexCutHandler(this);
         this.processor = new TGraphFSServer.Processor(this.handler);
     }
 
     public void start() {
         try {
-            /*
-            TServerTransport serverTransport = new TServerSocket(this.port);
-            Factory proFactory = new Factory();
-            TThreadPoolServer.Args args = new TThreadPoolServer.Args(serverTransport).processor(processor).protocolFactory(proFactory);
-            //NOTE: TThreadPoolServer could be the best option for concurrent client less than 10,000, check: https://github.com/m1ch1/mapkeeper/wiki/Thrift-Java-Servers-Compared
-            args.maxWorkerThreads(this.serverNum * 200);
-            TServer server = new TThreadPoolServer(args);
-            */
             TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(this.port);
             TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);
             tArgs.processor(processor);
@@ -50,7 +41,7 @@ public class VertexCutSrv extends AbstractSrv {
 
     @Override
     public Set<Integer> getEdgeLocs(byte[] src) {
-        HashSet<Integer> reqs = new HashSet<Integer>();
+        HashSet<Integer> reqs = new HashSet<>();
         for (int i = 0; i < this.serverNum; i++) {
             reqs.add(i);
         }
@@ -60,9 +51,15 @@ public class VertexCutSrv extends AbstractSrv {
     @Override
     public Set<Integer> getVertexLocation(byte[] src) {
         Set<Integer> locs = new HashSet<>();
-        int startIdx = HashKeyLocation.getEdgeLocation(src, this.serverNum);
+        int startIdx = getEdgeLocation(src, this.serverNum);
         locs.add(startIdx);
         return locs;
+    }
+
+    private int getEdgeLocation(byte[] src, int serverNum) {
+        JenkinsHash jh = new JenkinsHash();
+        int hashi = Math.abs(jh.hash32(src));
+        return (hashi % serverNum);
     }
 
 }
