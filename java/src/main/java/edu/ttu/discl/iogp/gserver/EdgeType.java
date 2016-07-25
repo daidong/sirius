@@ -2,16 +2,10 @@ package edu.ttu.discl.iogp.gserver;
 
 public enum EdgeType {
 
-    STATIC_ATTR(0),
-    DYNAMIC_ATTR(1),
-    RUN(2),
-    WAS_RUN_BY(3),
-    CONTAIN(4),
-    BELONG_TO(5),
-    EXECUTE(6),
-    EXECUTE_BY(7),
-    JOB_HAS(8),
-    BELONG_TO_JOB(9);
+    IN(0),
+    OUT(1),
+    STATIC_ATTR(2),
+    DYNAMIC_ATTR(3);
 
     private final int value;
 

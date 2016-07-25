@@ -1,6 +1,7 @@
 package edu.ttu.discl.iogp.gserver;
 
 import edu.ttu.discl.iogp.gserver.edgecut.EdgeCutSrv;
+import edu.ttu.discl.iogp.gserver.iogp.IOGPSrv;
 import edu.ttu.discl.iogp.gserver.vertexcut.VertexCutSrv;
 
 import java.util.ArrayList;
@@ -46,6 +47,9 @@ public class ServerExecutable implements Runnable {
                 break;
             case "vertexcut":
                 abstractSrv = new VertexCutSrv();
+                break;
+            case "iogp":
+                abstractSrv = new IOGPSrv();
                 break;
             default:
                 System.out.println("Undefined Server Type!");

@@ -6,9 +6,12 @@ import java.util.Arrays;
 
 public class DBKey {
 
+	/**
+     * |src|type|dst|ts|
+     */
     public byte[] src;
-    public byte[] dst;
     public int type;
+    public byte[] dst;
     public long ts;
 
     public final static int MAX_SUBKEY_LEN = 1024;
@@ -127,7 +130,6 @@ public class DBKey {
     }
 
     public String toString() {
-
         return Arrays.toString(src) + ":" + type + ":" + Arrays.toString(dst) + ":" + ts;
     }
 }

@@ -22,7 +22,7 @@ public class ServerMain {
         // test classpath
         try {
             //test if module dependency is in the classpath.
-            Class.forName("org.gmd.commons.ServerMain");
+            Class.forName("edu.ttu.discl.iogp.gserver.ServerMain");
             //test if other dependencies are in the classpath.
             Class.forName("org.apache.commons.lang.WordUtils");
         } catch (ClassNotFoundException e) {
@@ -80,13 +80,13 @@ public class ServerMain {
 
             if (args.length == 0) {
                 HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp("gmd-server", options);
+                formatter.printHelp("iogp-server", options);
                 System.exit(0);
             }
 
             if (line.hasOption("help")) {
                 HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp("gmd-server", options);
+                formatter.printHelp("iogp-server", options);
                 System.exit(0);
             }
 

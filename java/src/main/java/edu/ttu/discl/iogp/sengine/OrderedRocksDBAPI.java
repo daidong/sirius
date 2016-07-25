@@ -96,7 +96,7 @@ public class OrderedRocksDBAPI {
             options.setCompressionType(CompressionType.SNAPPY_COMPRESSION);
             options.getEnv().setBackgroundThreads(8, RocksEnv.COMPACTION_POOL);
             options.getEnv().setBackgroundThreads(2, RocksEnv.FLUSH_POOL);
-            //options.setDisableAutoCompactions(true);
+            options.setDisableAutoCompactions(true);
             options.setMaxBackgroundCompactions(8);
             options.setMaxBackgroundFlushes(2);
             options.setCompactionStyle(CompactionStyle.LEVEL);
