@@ -15,6 +15,8 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class IOGPSrv extends AbstractSrv {
 
@@ -23,11 +25,11 @@ public class IOGPSrv extends AbstractSrv {
      */
     HashMap<ByteBuffer, Integer> split;
     HashMap<ByteBuffer, Integer> loc;
-    HashMap<ByteBuffer, Counters> edgecounters;
+    ConcurrentHashMap<ByteBuffer, Counters> edgecounters;
     IOGPGraphSplitMover spliter = null;
     IOGPGraphReassigner reassigner = null;
 
-    int size = 0;
+    AtomicInteger size = new AtomicInteger(0);
 
     public IOGPSrv() {
         super();
@@ -36,7 +38,7 @@ public class IOGPSrv extends AbstractSrv {
 
         split = new HashMap<>();
         loc = new HashMap<>();
-        edgecounters = new HashMap<>();
+        edgecounters = new ConcurrentHashMap<>();
 
         spliter = new IOGPGraphSplitMover(this);
         reassigner = new IOGPGraphReassigner(this);

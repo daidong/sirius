@@ -151,7 +151,7 @@ public class IOGPGraphSplitMover{
 							e.printStackTrace();
 						}
 
-						inst.size -= kvs.size();
+						inst.size.addAndGet(0 - kvs.size());
 					}
 
 				} catch (InterruptedException e) {

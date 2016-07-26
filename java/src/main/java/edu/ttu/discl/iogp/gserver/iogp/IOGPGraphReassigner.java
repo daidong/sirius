@@ -27,6 +27,12 @@ public class IOGPGraphReassigner {
 
 		@Override
 		public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
+			try {
+				fennel_score[finished] = t.getResult();
+			} catch (TException e) {
+				e.printStackTrace();
+			}
+
 			lock.lock();
 			try {
 				if (broadcast.decrementAndGet() == 0) {
@@ -67,7 +73,7 @@ public class IOGPGraphReassigner {
 		for (int i = 0; i < inst.serverNum; i++){
 			TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
 			try {
-				aclient.split(src, new CollectEdgeCountersCallback(i));
+				aclient.fennel(src, new CollectEdgeCountersCallback(i));
 			} catch (TException e) {
 				e.printStackTrace();
 			}
@@ -83,8 +89,13 @@ public class IOGPGraphReassigner {
 		/**
 		 * Second Step: Choose the best one and decide whether move the vertices or not
 		 */
+		if (!inst.edgecounters.containsKey(src))
+			inst.edgecounters.put(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+		Counters c = inst.edgecounters.get(src);
+
 		boolean reassign_decision = false;
-		int local_score = fennel_score[inst.getLocalIdx()];
+		int local_score = 2 * (c.pli + c.plo) - inst.size.get();
+
 		int target = inst.getLocalIdx();
 		for (int i = 0; i < inst.serverNum; i++)
 			if (fennel_score[i] > local_score) {
@@ -103,13 +114,12 @@ public class IOGPGraphReassigner {
 		if (reassign_decision != true) return;
 
 		try {
-			inst.getClientConn(target).reassign(src, 1);
-			inst.getClientConn(inst.getEdgeLoc(bsrc, inst.serverNum)).reassign(src, 0);
+			inst.getClientConn(target).reassign(src, 1, target);
+			inst.getClientConn(inst.getEdgeLoc(bsrc, inst.serverNum)).reassign(src, 0, target);
 		} catch (TException e) {
 			e.printStackTrace();
 		}
 
-		Counters c = inst.edgecounters.get(src);
 		c.plo = c.alo;
 		c.pli = c.ali;
 		inst.loc.remove(src);
@@ -117,10 +127,13 @@ public class IOGPGraphReassigner {
 		DBKey startKey = DBKey.MinDBKey(bsrc);
 		DBKey endKey = DBKey.MaxDBKey(bsrc);
 		ArrayList<KeyValue> kvs = inst.localstore.scanKV(startKey.toKey(), endKey.toKey());
+		inst.size.addAndGet(0 - kvs.size());
 
 		for (KeyValue kv : kvs){
 			DBKey key = new DBKey(kv.getKey());
 			ByteBuffer bdst = ByteBuffer.wrap(key.dst);
+			if (!inst.edgecounters.containsKey(bdst))
+				inst.edgecounters.put(bdst, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
 			Counters dstc = inst.edgecounters.get(bdst);
 
 			if (inst.loc.containsKey(bdst)

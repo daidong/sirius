@@ -28,7 +28,7 @@ public abstract class BaseHandler implements TGraphFSServer.Iface{
 
     abstract public int split(ByteBuffer src) throws RedirectException, TException;
 
-    abstract public int reassign(ByteBuffer src, int type) throws RedirectException, TException;
+    abstract public int reassign(ByteBuffer src, int type, int target) throws RedirectException, TException;
 
     abstract public int fennel(ByteBuffer src) throws RedirectException, TException;
 

@@ -51,7 +51,7 @@ public class TGraphFSServer {
 
     public int split(ByteBuffer src) throws RedirectException, org.apache.thrift.TException;
 
-    public int reassign(ByteBuffer src, int type) throws org.apache.thrift.TException;
+    public int reassign(ByteBuffer src, int type, int target) throws org.apache.thrift.TException;
 
     public int fennel(ByteBuffer src) throws RedirectException, org.apache.thrift.TException;
 
@@ -85,7 +85,7 @@ public class TGraphFSServer {
 
     public void split(ByteBuffer src, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
 
-    public void reassign(ByteBuffer src, int type, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
+    public void reassign(ByteBuffer src, int type, int target, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
 
     public void fennel(ByteBuffer src, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
 
@@ -284,17 +284,18 @@ public class TGraphFSServer {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "split failed: unknown result");
     }
 
-    public int reassign(ByteBuffer src, int type) throws org.apache.thrift.TException
+    public int reassign(ByteBuffer src, int type, int target) throws org.apache.thrift.TException
     {
-      send_reassign(src, type);
+      send_reassign(src, type, target);
       return recv_reassign();
     }
 
-    public void send_reassign(ByteBuffer src, int type) throws org.apache.thrift.TException
+    public void send_reassign(ByteBuffer src, int type, int target) throws org.apache.thrift.TException
     {
       reassign_args args = new reassign_args();
       args.setSrc(src);
       args.setType(type);
+      args.setTarget(target);
       sendBase("reassign", args);
     }
 
@@ -723,9 +724,9 @@ public class TGraphFSServer {
       }
     }
 
-    public void reassign(ByteBuffer src, int type, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException {
+    public void reassign(ByteBuffer src, int type, int target, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      reassign_call method_call = new reassign_call(src, type, resultHandler, this, ___protocolFactory, ___transport);
+      reassign_call method_call = new reassign_call(src, type, target, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -733,10 +734,12 @@ public class TGraphFSServer {
     public static class reassign_call extends org.apache.thrift.async.TAsyncMethodCall {
       private ByteBuffer src;
       private int type;
-      public reassign_call(ByteBuffer src, int type, org.apache.thrift.async.AsyncMethodCallback resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private int target;
+      public reassign_call(ByteBuffer src, int type, int target, org.apache.thrift.async.AsyncMethodCallback resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.src = src;
         this.type = type;
+        this.target = target;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -744,6 +747,7 @@ public class TGraphFSServer {
         reassign_args args = new reassign_args();
         args.setSrc(src);
         args.setType(type);
+        args.setTarget(target);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -1203,7 +1207,7 @@ public class TGraphFSServer {
 
       public reassign_result getResult(I iface, reassign_args args) throws org.apache.thrift.TException {
         reassign_result result = new reassign_result();
-        result.success = iface.reassign(args.src, args.type);
+        result.success = iface.reassign(args.src, args.type, args.target);
         result.setSuccessIsSet(true);
         return result;
       }
@@ -1799,7 +1803,7 @@ public class TGraphFSServer {
       }
 
       public void start(I iface, reassign_args args, org.apache.thrift.async.AsyncMethodCallback<Integer> resultHandler) throws TException {
-        iface.reassign(args.src, args.type,resultHandler);
+        iface.reassign(args.src, args.type, args.target,resultHandler);
       }
     }
 
@@ -7999,6 +8003,7 @@ public class TGraphFSServer {
 
     private static final org.apache.thrift.protocol.TField SRC_FIELD_DESC = new org.apache.thrift.protocol.TField("src", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField TYPE_FIELD_DESC = new org.apache.thrift.protocol.TField("type", org.apache.thrift.protocol.TType.I32, (short)2);
+    private static final org.apache.thrift.protocol.TField TARGET_FIELD_DESC = new org.apache.thrift.protocol.TField("target", org.apache.thrift.protocol.TType.I32, (short)3);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -8008,11 +8013,13 @@ public class TGraphFSServer {
 
     public ByteBuffer src; // required
     public int type; // required
+    public int target; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       SRC((short)1, "src"),
-      TYPE((short)2, "type");
+      TYPE((short)2, "type"),
+      TARGET((short)3, "target");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -8031,6 +8038,8 @@ public class TGraphFSServer {
             return SRC;
           case 2: // TYPE
             return TYPE;
+          case 3: // TARGET
+            return TARGET;
           default:
             return null;
         }
@@ -8072,6 +8081,7 @@ public class TGraphFSServer {
 
     // isset id assignments
     private static final int __TYPE_ISSET_ID = 0;
+    private static final int __TARGET_ISSET_ID = 1;
     private byte __isset_bitfield = 0;
     public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
     static {
@@ -8079,6 +8089,8 @@ public class TGraphFSServer {
       tmpMap.put(_Fields.SRC, new org.apache.thrift.meta_data.FieldMetaData("src", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
       tmpMap.put(_Fields.TYPE, new org.apache.thrift.meta_data.FieldMetaData("type", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
+      tmpMap.put(_Fields.TARGET, new org.apache.thrift.meta_data.FieldMetaData("target", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(reassign_args.class, metaDataMap);
@@ -8089,12 +8101,15 @@ public class TGraphFSServer {
 
     public reassign_args(
       ByteBuffer src,
-      int type)
+      int type,
+      int target)
     {
       this();
       this.src = org.apache.thrift.TBaseHelper.copyBinary(src);
       this.type = type;
       setTypeIsSet(true);
+      this.target = target;
+      setTargetIsSet(true);
     }
 
     /**
@@ -8106,6 +8121,7 @@ public class TGraphFSServer {
         this.src = org.apache.thrift.TBaseHelper.copyBinary(other.src);
       }
       this.type = other.type;
+      this.target = other.target;
     }
 
     public reassign_args deepCopy() {
@@ -8117,6 +8133,8 @@ public class TGraphFSServer {
       this.src = null;
       setTypeIsSet(false);
       this.type = 0;
+      setTargetIsSet(false);
+      this.target = 0;
     }
 
     public byte[] getSrc() {
@@ -8176,6 +8194,29 @@ public class TGraphFSServer {
       __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __TYPE_ISSET_ID, value);
     }
 
+    public int getTarget() {
+      return this.target;
+    }
+
+    public reassign_args setTarget(int target) {
+      this.target = target;
+      setTargetIsSet(true);
+      return this;
+    }
+
+    public void unsetTarget() {
+      __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __TARGET_ISSET_ID);
+    }
+
+    /** Returns true if field target is set (has been assigned a value) and false otherwise */
+    public boolean isSetTarget() {
+      return EncodingUtils.testBit(__isset_bitfield, __TARGET_ISSET_ID);
+    }
+
+    public void setTargetIsSet(boolean value) {
+      __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __TARGET_ISSET_ID, value);
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case SRC:
@@ -8194,6 +8235,14 @@ public class TGraphFSServer {
         }
         break;
 
+      case TARGET:
+        if (value == null) {
+          unsetTarget();
+        } else {
+          setTarget((Integer)value);
+        }
+        break;
+
       }
     }
 
@@ -8204,6 +8253,9 @@ public class TGraphFSServer {
 
       case TYPE:
         return Integer.valueOf(getType());
+
+      case TARGET:
+        return Integer.valueOf(getTarget());
 
       }
       throw new IllegalStateException();
@@ -8220,6 +8272,8 @@ public class TGraphFSServer {
         return isSetSrc();
       case TYPE:
         return isSetType();
+      case TARGET:
+        return isSetTarget();
       }
       throw new IllegalStateException();
     }
@@ -8255,6 +8309,15 @@ public class TGraphFSServer {
           return false;
       }
 
+      boolean this_present_target = true;
+      boolean that_present_target = true;
+      if (this_present_target || that_present_target) {
+        if (!(this_present_target && that_present_target))
+          return false;
+        if (this.target != that.target)
+          return false;
+      }
+
       return true;
     }
 
@@ -8271,6 +8334,11 @@ public class TGraphFSServer {
       list.add(present_type);
       if (present_type)
         list.add(type);
+
+      boolean present_target = true;
+      list.add(present_target);
+      if (present_target)
+        list.add(target);
 
       return list.hashCode();
     }
@@ -8299,6 +8367,16 @@ public class TGraphFSServer {
       }
       if (isSetType()) {
         lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.type, other.type);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetTarget()).compareTo(other.isSetTarget());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetTarget()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.target, other.target);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -8333,6 +8411,10 @@ public class TGraphFSServer {
       if (!first) sb.append(", ");
       sb.append("type:");
       sb.append(this.type);
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("target:");
+      sb.append(this.target);
       first = false;
       sb.append(")");
       return sb.toString();
@@ -8395,6 +8477,14 @@ public class TGraphFSServer {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 3: // TARGET
+              if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
+                struct.target = iprot.readI32();
+                struct.setTargetIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -8417,6 +8507,9 @@ public class TGraphFSServer {
         }
         oprot.writeFieldBegin(TYPE_FIELD_DESC);
         oprot.writeI32(struct.type);
+        oprot.writeFieldEnd();
+        oprot.writeFieldBegin(TARGET_FIELD_DESC);
+        oprot.writeI32(struct.target);
         oprot.writeFieldEnd();
         oprot.writeFieldStop();
         oprot.writeStructEnd();
@@ -8442,19 +8535,25 @@ public class TGraphFSServer {
         if (struct.isSetType()) {
           optionals.set(1);
         }
-        oprot.writeBitSet(optionals, 2);
+        if (struct.isSetTarget()) {
+          optionals.set(2);
+        }
+        oprot.writeBitSet(optionals, 3);
         if (struct.isSetSrc()) {
           oprot.writeBinary(struct.src);
         }
         if (struct.isSetType()) {
           oprot.writeI32(struct.type);
         }
+        if (struct.isSetTarget()) {
+          oprot.writeI32(struct.target);
+        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, reassign_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(2);
+        BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           struct.src = iprot.readBinary();
           struct.setSrcIsSet(true);
@@ -8462,6 +8561,10 @@ public class TGraphFSServer {
         if (incoming.get(1)) {
           struct.type = iprot.readI32();
           struct.setTypeIsSet(true);
+        }
+        if (incoming.get(2)) {
+          struct.target = iprot.readI32();
+          struct.setTargetIsSet(true);
         }
       }
     }

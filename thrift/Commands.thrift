@@ -72,7 +72,7 @@ service TGraphFSServer {
     list<KeyValue> read(1:binary src, 2:binary dst, 3:i32 type) throws (1: RedirectException r),
     list<KeyValue> scan(1:binary src, 2:i32 type) throws (1: RedirectException r),
     i32 split(1:binary src) throws (1: RedirectException r),
-    i32 reassign(1:binary src, 2:i32 type),
+    i32 reassign(1:binary src, 2:i32 type, 3:i32 target),
     i32 fennel(1:binary src) throws (1: RedirectException r),
 
 	i32 syncTravel(1:TravelCommand tc),
