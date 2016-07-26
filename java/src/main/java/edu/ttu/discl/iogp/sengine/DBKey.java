@@ -12,7 +12,6 @@ public class DBKey {
     public byte[] src;
     public int type;
     public byte[] dst;
-    public long ts;
 
     public final static int MAX_SUBKEY_LEN = 1024;
     public static final byte[] MAX_SHORT_BYTE = new byte[MAX_SUBKEY_LEN];
@@ -25,48 +24,38 @@ public class DBKey {
     }
 
     public static DBKey MaxDBKey() {
-        return new DBKey(MAX_SHORT_BYTE, MAX_SHORT_BYTE, Integer.MAX_VALUE, Long.MAX_VALUE);
+        return new DBKey(MAX_SHORT_BYTE, MAX_SHORT_BYTE, Integer.MAX_VALUE);
     }
 
     public static DBKey MaxDBKey(byte[] src) {
-        DBKey max = new DBKey(src, MAX_SHORT_BYTE, Integer.MAX_VALUE, Long.MAX_VALUE);
+        DBKey max = new DBKey(src, MAX_SHORT_BYTE, Integer.MAX_VALUE);
         return max;
     }
 
     public static DBKey MaxDBKey(byte[] src, int type) {
-        DBKey max = new DBKey(src, MAX_SHORT_BYTE, type, Long.MAX_VALUE);
-        return max;
-    }
-
-    public static DBKey MaxDBKey(byte[] src, int type, long ts) {
-        DBKey max = new DBKey(src, MAX_SHORT_BYTE, type, ts);
+        DBKey max = new DBKey(src, MAX_SHORT_BYTE, type);
         return max;
     }
 
     public static DBKey MinDBKey() {
-        return new DBKey(MIN_SHORT_BYTE, MIN_SHORT_BYTE, 0, 0L);
+        return new DBKey(MIN_SHORT_BYTE, MIN_SHORT_BYTE, 0);
     }
 
     public static DBKey MinDBKey(byte[] src) {
-        DBKey min = new DBKey(src, MIN_SHORT_BYTE, 0, 0L);
+        DBKey min = new DBKey(src, MIN_SHORT_BYTE, 0);
         return min;
     }
 
     public static DBKey MinDBKey(byte[] src, int type) {
-        DBKey min = new DBKey(src, MIN_SHORT_BYTE, type, 0L);
+        DBKey min = new DBKey(src, MIN_SHORT_BYTE, type);
         return min;
     }
 
-    public static DBKey MinDBKey(byte[] src, int type, long ts) {
-        DBKey min = new DBKey(src, MIN_SHORT_BYTE, type, ts);
-        return min;
-    }
 
-    public DBKey(byte[] s, byte[] d, int t, long ts) {
+    public DBKey(byte[] s, byte[] d, int t) {
         this.src = s;
         this.dst = d;
         this.type = t;
-        this.ts = ts;
     }
 
     public DBKey(byte[] data) {
@@ -86,21 +75,18 @@ public class DBKey {
         System.arraycopy(data, offset, dst, 0, dstLen);
         offset += dstLen;
 
-        long ts = ArrayPrimitives.btol(data, offset);
-
-        DBKey k = new DBKey(src, dst, edgeType, ts);
+        DBKey k = new DBKey(src, dst, edgeType);
         this.src = src;
         this.dst = dst;
         this.type = edgeType;
-        this.ts = ts;
     }
 
     public int size() {
-        return (src.length + 2 + dst.length + 2 + 4 + 8);
+        return (src.length + 2 + dst.length + 2 + 4);
     }
 
     public byte[] toKey() {
-        int capacity = src.length + 2 + dst.length + 2 + 4 + 8;
+        int capacity = src.length + 2 + dst.length + 2 + 4;
         byte[] key = new byte[capacity];
 
         short srcLen = (short) src.length;
@@ -123,13 +109,10 @@ public class DBKey {
         System.arraycopy(dst, 0, key, offset, dstLen);
         offset += dstLen;
 
-        byte[] tsBytes = ArrayPrimitives.ltob(ts);
-        System.arraycopy(tsBytes, 0, key, offset, tsBytes.length);
-
         return key;
     }
 
     public String toString() {
-        return Arrays.toString(src) + ":" + type + ":" + Arrays.toString(dst) + ":" + ts;
+        return Arrays.toString(src) + ":" + type + ":" + Arrays.toString(dst);
     }
 }

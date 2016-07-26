@@ -2,10 +2,11 @@ package edu.ttu.discl.iogp.gserver;
 
 public enum EdgeType {
 
-    IN(0),
-    OUT(1),
-    STATIC_ATTR(2),
-    DYNAMIC_ATTR(3);
+    STATIC_ATTR(0),
+    DYNAMIC_ATTR(1),
+
+    IN(2),
+    OUT(3);
 
     private final int value;
 

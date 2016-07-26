@@ -1,17 +1,18 @@
 namespace java edu.ttu.discl.iogp.thrift
-namespace cpp gmd
 
 struct KeyValue {
   1: binary key,
   2: binary value,
 }
 
-exception RedirectException{
-	1: required binary bitmap;
-	2: optional list<KeyValue> res;
+struct Movement {
+  1: required i32 loc,
+  2: required KeyValue kv,
 }
-exception OffloadException{
-  1: required binary src;
+
+exception RedirectException{
+	1: required i32 status,
+	2: optional list<Movement> re,
 }
 
 struct Dist{
@@ -65,14 +66,14 @@ struct TravelCommand {
 }
 
 service TGraphFSServer {
-	i32 insert(1:binary src, 2:binary dst, 3:i32 type, 4:binary val, 5:i64 ts) throws (1: RedirectException r),
-    i32 batch_insert(1:binary src, 2:i32 vid, 3:list<KeyValue> batches) throws (1: RedirectException r),
-    i32 split(1:binary src, 2:i32 vid, 3:i32 stage, 4:binary bitmap),
-    i32 rec_split(1:binary src, 2:i32 vid, 3:list<KeyValue> batches),
+	i32 insert(1:binary src, 2:binary dst, 3:i32 type, 4:binary val) throws (1: RedirectException r),
+    i32 batch_insert(1:list<KeyValue> batches, 2:i32 type) throws (1: RedirectException r),
     list<Dist> get_state(), //list<Dist> stat_dst(1: Command c),
-    list<KeyValue> read(1:binary src, 2:binary dst, 3:i32 type, 4:i64 ts) throws (1: RedirectException r),
-    list<KeyValue> scan(1:binary src, 2:i32 type, 3:binary bitmap, 4:i64 ts1, 5:i64 ts2) throws (1: RedirectException r),
-    i32 echo(1:i32 s, 2:binary payload),
+    list<KeyValue> read(1:binary src, 2:binary dst, 3:i32 type) throws (1: RedirectException r),
+    list<KeyValue> scan(1:binary src, 2:i32 type) throws (1: RedirectException r),
+    i32 split(1:binary src) throws (1: RedirectException r),
+    i32 reassign(1:binary src, 2:i32 type),
+    i32 fennel(1:binary src) throws (1: RedirectException r),
 
 	i32 syncTravel(1:TravelCommand tc),
 	i32 syncTravelMaster(1:TravelCommand tc),

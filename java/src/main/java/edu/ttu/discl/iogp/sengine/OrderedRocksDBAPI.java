@@ -52,7 +52,7 @@ public class OrderedRocksDBAPI {
 
         /**
          * Compare two keys: src-id (ByteBuffer) : edge-type (int) : dst-id
-         * (ByteBuffer) : ts (long)
+         * (ByteBuffer)
          */
         @Override
         public int compare(Slice a, Slice b) {
@@ -72,14 +72,6 @@ public class OrderedRocksDBAPI {
                 return dstc;
             }
 
-            if (keyA.ts != keyB.ts) {  //got the time reversed
-                if (keyA.ts < keyB.ts) {
-                    return 1;
-                }
-                if (keyA.ts > keyB.ts) {
-                    return -1;
-                }
-            }
             return 0;
         }
     }
@@ -192,14 +184,6 @@ public class OrderedRocksDBAPI {
             return dstc;
         }
 
-        if (keyA.ts != keyB.ts) {  //reverse the time
-            if (keyA.ts < keyB.ts) {
-                return 1;
-            }
-            if (keyA.ts > keyB.ts) {
-                return -1;
-            }
-        }
         return 0;
     }
 

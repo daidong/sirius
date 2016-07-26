@@ -3,7 +3,6 @@ package edu.ttu.discl.iogp.gserver.edgecut;
 import edu.ttu.discl.iogp.gserver.AbstractSrv;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
 import edu.ttu.discl.iogp.utils.GLogger;
-import edu.ttu.discl.iogp.utils.JenkinsHash;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.server.TServer;
@@ -40,24 +39,19 @@ public class EdgeCutSrv extends AbstractSrv {
     }
 
     @Override
-    public Set<Integer> getEdgeLocs(byte[] src) {
+    public Set<Integer> getEdgeLocs(byte[] src, int type) {
         Set<Integer> locs = new HashSet<>();
-        int startIdx = getEdgeLocation(src, this.serverNum);
+        int startIdx = getEdgeLoc(src, this.serverNum);
         locs.add(startIdx);
         return locs;
     }
 
     @Override
-    public Set<Integer> getVertexLocation(byte[] src) {
+    public Set<Integer> getVertexLoc(byte[] src) {
         Set<Integer> locs = new HashSet<>();
-        int startIdx = getEdgeLocation(src, this.serverNum);
+        int startIdx = getEdgeLoc(src, this.serverNum);
         locs.add(startIdx);
         return locs;
     }
 
-    private int getEdgeLocation(byte[] src, int serverNum) {
-        JenkinsHash jh = new JenkinsHash();
-        int hashi = Math.abs(jh.hash32(src));
-        return (hashi % serverNum);
-    }
 }

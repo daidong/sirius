@@ -47,6 +47,7 @@ public abstract class GraphClt {
                 transport.open();
             } catch (TTransportException e) {
                 GLogger.error("FATAL ERROR: Client can not connect to %s:%s", addr, this.port);
+                System.exit(0);
             }
             TProtocol protocol = new TBinaryProtocol(transport);
             TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
@@ -76,19 +77,6 @@ public abstract class GraphClt {
     abstract public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long start_ts, long end_ts) throws TException;
 
     abstract public HashMap<Integer, Integer> getStats();
-    
-    public void EchoTest(){
-        ByteBuffer payload = ByteBuffer.wrap("Hello World".getBytes());
-        for (int target = 0; target < this.serverNum; target++){
-            try {
-                int t = this.conns[target].echo(target, payload);
-                if (t == 0)
-                    System.out.println("Server " + target + " reply OK");
-            } catch (TException ex) {
-                Logger.getLogger(GraphClt.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-    }
 
     public int submitTravel(List<SingleStep> travelPlan) throws TException {
         long ts = System.currentTimeMillis();

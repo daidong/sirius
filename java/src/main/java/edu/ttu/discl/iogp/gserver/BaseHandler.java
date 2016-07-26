@@ -16,84 +16,22 @@ public abstract class BaseHandler implements TGraphFSServer.Iface{
 
     public SyncTravelEngine syncEngine = null;
 
-    /**
-     * insert an edge into the storage.
-     * @param src
-     * @param dst
-     * @param type
-     * @param val
-     * @param ts
-     * @return
-     * @throws RedirectException
-     * @throws TException
-     */
-    abstract public int insert(ByteBuffer src, ByteBuffer dst, int type, ByteBuffer val, long ts) throws RedirectException, TException;
+    abstract public int insert(ByteBuffer src, ByteBuffer dst, int type, ByteBuffer val) throws RedirectException, TException;
 
-    /**
-     * batch insert the edge into the storage.
-     * @param src
-     * @param vid
-     * @param batches
-     * @return
-     * @throws RedirectException
-     * @throws TException
-     */
-    abstract public int batch_insert(ByteBuffer src, int vid, List<KeyValue> batches) throws RedirectException, TException;
+    abstract public List<KeyValue> read(ByteBuffer src, ByteBuffer dst, int type) throws RedirectException, TException;
 
-    /**
-     * split the edge
-     * @param src
-     * @param vid
-     * @param stage
-     * @param bitmap
-     * @return
-     * @throws TException
-     */
-    abstract public int split(ByteBuffer src, int vid, int stage, ByteBuffer bitmap) throws TException;
+    abstract public List<KeyValue> scan(ByteBuffer src, int type) throws RedirectException, TException;
 
-    /**
-     * receive splitted key value.
-     * @param src
-     * @param vid
-     * @param batches
-     * @return
-     * @throws TException
-     */
-    abstract public int rec_split(ByteBuffer src, int vid, List<KeyValue> batches) throws TException;
+    abstract public int batch_insert(List<KeyValue> batches, int type) throws RedirectException, TException;
 
     abstract public List<Dist> get_state() throws TException;
 
-    /**
-     * read information of a certain edge.
-     * @param src
-     * @param dst
-     * @param type
-     * @param ts
-     * @return
-     * @throws RedirectException
-     * @throws TException
-     */
-    abstract public List<KeyValue> read(ByteBuffer src, ByteBuffer dst, int type, long ts) throws RedirectException, TException;
+    abstract public int split(ByteBuffer src) throws RedirectException, TException;
 
-    /**
-     * scan all the out-going edges from src.
-     * @param src
-     * @param type
-     * @param bitmap
-     * @param ts1
-     * @param ts2
-     * @return
-     * @throws RedirectException
-     * @throws TException
-     */
-    abstract public List<KeyValue> scan(ByteBuffer src, int type, ByteBuffer bitmap, long ts1, long ts2) throws RedirectException, TException;
-    
-    public int echo(int s, ByteBuffer payload) throws TException{
-        byte[] load = NIOHelper.getActiveArray(payload);
-        System.out.println("[Thrift Test] Server Receive: " + " Int: " + s + " ByteBuffer: " + new String(load));
-        return 0;
-    }
-    
+    abstract public int reassign(ByteBuffer src, int type) throws RedirectException, TException;
+
+    abstract public int fennel(ByteBuffer src) throws RedirectException, TException;
+
     public int syncTravel(TravelCommand tc) throws TException {
         return syncEngine.syncTravel(tc);
     }

@@ -4,6 +4,7 @@ import edu.ttu.discl.iogp.sengine.OrderedRocksDBAPI;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
 import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.GLogger;
+import edu.ttu.discl.iogp.utils.JenkinsHash;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.TAsyncClientManager;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -95,9 +96,14 @@ public abstract class AbstractSrv {
          */
     }
 
-    public abstract Set<Integer> getEdgeLocs(byte[] src);
+    public abstract Set<Integer> getEdgeLocs(byte[] src, int type);
+    public abstract Set<Integer> getVertexLoc(byte[] src);
 
-    public abstract Set<Integer> getVertexLocation(byte[] src);
+    public int getEdgeLoc(byte[] src, int serverNum) {
+        JenkinsHash jh = new JenkinsHash();
+        int hashi = Math.abs(jh.hash32(src));
+        return (hashi % serverNum);
+    }
 
     public void runit() {
         init();
@@ -106,14 +112,6 @@ public abstract class AbstractSrv {
 
     public void start() {
         try {
-            /*  ThreadPoolServer
-             TServerTransport serverTransport = new TServerSocket(this.port);
-             TBinaryProtocol.Factory proFactory = new TBinaryProtocol.Factory();
-             TThreadPoolServer.Args args = new TThreadPoolServer.Args(serverTransport).processor(processor).protocolFactory(proFactory);
-             //NOTE: TThreadPoolServer could be the best option for concurrent client less than 10,000, check: https://github.com/m1ch1/mapkeeper/wiki/Thrift-Java-Servers-Compared
-             args.maxWorkerThreads(this.serverNum * 200);
-             TServer server = new TThreadPoolServer(args);
-             */
             TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(this.port);
             TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);
             tArgs.processor(processor);

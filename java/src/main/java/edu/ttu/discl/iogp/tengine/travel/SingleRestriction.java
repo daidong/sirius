@@ -11,21 +11,6 @@ import java.util.Map;
 
 public abstract class SingleRestriction implements Restriction
 {
-	public static SingleRestriction parseJSONString(String json){
-		JSONCommand js = new JSONCommand();
-		Map r = js.parse(json);
-		String type = (String) r.get("type");
-		if ("eq".equalsIgnoreCase(type)){
-			return SingleRestriction.EQ.parseJSONString(json);
-		} else if ("in".equalsIgnoreCase(type)){
-			return SingleRestriction.InWithValues.parseJSON(json);
-		} else if ("slice".equalsIgnoreCase(type)){
-			return SingleRestriction.Slice.parseJSON(json);
-		} else if ("range".equalsIgnoreCase(type)){
-			return SingleRestriction.Range.parseJSON(json);
-		}
-		return null;
-	}
 
 	public static SingleRestriction parseJSON(String json){
 		JSONCommand js = new JSONCommand();

@@ -32,9 +32,9 @@ public class IOGPClt extends GraphClt {
     }
 
     public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, long ts) throws TException {
-        //int dstServer = HashKeyLocation.getEdgeLocation(srcVertex, this.serverNum);
+        //int dstServer = HashKeyLocation.getEdgeLoc(srcVertex, this.serverNum);
         int dstServer = getEdgeLocation(dstKey, this.serverNum);
-        List<KeyValue> r = getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ts);
+        List<KeyValue> r = getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get());
         return r;
     }
 
@@ -52,8 +52,7 @@ public class IOGPClt extends GraphClt {
 
     public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value, long ts) throws TException {
         int dstServer = getEdgeLocation(combine(srcVertex, dstKey), this.serverNum);
-        int r = getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(),
-                ByteBuffer.wrap(value), ts);
+        int r = getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ByteBuffer.wrap(value));
         return r;
     }
 
@@ -109,7 +108,7 @@ public class IOGPClt extends GraphClt {
         @Override
         public void run() {
             try {
-                getClientConn(server).batch_insert(null, -1, data);
+                getClientConn(server).batch_insert(data);
             } catch (TException e) {
                 e.printStackTrace();
             }
@@ -179,7 +178,7 @@ public class IOGPClt extends GraphClt {
         public void run() {
             List<KeyValue> r = null;
             try {
-                r = getClientConn(server).scan(ByteBuffer.wrap(srcVertex), type, null, start, end);
+                r = getClientConn(server).scan(ByteBuffer.wrap(srcVertex), type);
             } catch (TException e) {
                 e.printStackTrace();
             }

@@ -1,6 +1,7 @@
 package edu.ttu.discl.iogp.tengine;
 
 import edu.ttu.discl.iogp.gserver.AbstractSrv;
+import edu.ttu.discl.iogp.gserver.EdgeType;
 import edu.ttu.discl.iogp.tengine.prefetch.TravelLocalReaderWithCache;
 import edu.ttu.discl.iogp.tengine.travel.SingleRestriction;
 import edu.ttu.discl.iogp.tengine.travel.SingleStep;
@@ -51,7 +52,7 @@ public class SyncTravelVertexWorker implements Runnable {
         int tid = engine.mid.addAndGet(1);
         GLogger.info("S VR %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
         /*
-        ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(this.instance.localstore,
+        ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(this.inst.localstore,
                 engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
         */
         ArrayList<byte[]> passedVertices = TravelLocalReaderWithCache.filterVertices(this.instance.localstore, engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
@@ -75,9 +76,9 @@ public class SyncTravelVertexWorker implements Runnable {
                 GLogger.info("S TR %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                 client.syncTravelRtn(tc);
                 /*
-                Client client = instance.getClientConn(replyTo);
+                Client client = inst.getClientConn(replyTo);
                 synchronized (client) {
-                    GLogger.info("S TR %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                    GLogger.info("S TR %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
                     client.syncTravelRtn(tc);
                 }
                 */
@@ -90,7 +91,7 @@ public class SyncTravelVertexWorker implements Runnable {
             // Already verify the vertices; We need to verify the edges before generating next-step vertices
             HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = new HashMap<>();
             for (byte[] key : passedVertices) {
-                Set<Integer> servers = instance.getEdgeLocs(key);
+                Set<Integer> servers = instance.getEdgeLocs(key, EdgeType.OUT.get());
                 for (Integer s : servers) {
                     if (!perServerVertices.containsKey(s)) {
                         perServerVertices.put(s, new HashSet<ByteBuffer>());
@@ -108,17 +109,17 @@ public class SyncTravelVertexWorker implements Runnable {
                     .setLocal_id(instance.getLocalIdx())
                     .setSub_type(1);  //subtype==1 means we are extending to access edges
             //GLogger.warn("[%d] SyncTravelVertexWorker stepId[%d] Extend %d to %s (%d)",
-            //        instance.getLocalIdx(), stepId,
-            //        instance.getLocalIdx(), addrs, 1);
+            //        inst.getLocalIdx(), stepId,
+            //        inst.getLocalIdx(), addrs, 1);
 
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
                 GLogger.info("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                 client.syncTravelExtend(tc_ext);
                 /*
-                Client client = instance.getClientConn(replyTo);
+                Client client = inst.getClientConn(replyTo);
                 synchronized (client) {
-                    GLogger.info("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                    GLogger.info("S TE %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
                     client.syncTravelExtend(tc_ext);
                 }
                 */
@@ -151,7 +152,7 @@ public class SyncTravelVertexWorker implements Runnable {
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
                     aclient.syncTravel(tc1, new BroadCastTVCallback(s));
                     /*
-                    TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConn(s);
+                    TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConn(s);
                     synchronized (aclient) {
                         aclient.syncTravel(tc1, new BroadCastTVCallback(s));
                     }
@@ -188,17 +189,17 @@ public class SyncTravelVertexWorker implements Runnable {
                             .setReply_to(replyTo).setTs(ts).setSub_type(0); //finish on edges
 
                     //GLogger.warn("[%d] SyncTravelVertexWorker stepId[%d] Finish %d to %s (%d)",
-                    //        instance.getLocalIdx(), stepId,
-                    //        getFrom, instance.getLocalIdx(), 0);
+                    //        inst.getLocalIdx(), stepId,
+                    //        getFrom, inst.getLocalIdx(), 0);
                     try {
                         TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
                         GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                         client.syncTravelFinish(tc3);
 
                         /*
-                        Client client = instance.getClientConn(replyTo);
+                        Client client = inst.getClientConn(replyTo);
                         synchronized (client) {
-                            GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                            GLogger.info("S TF %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
                             client.syncTravelFinish(tc3);
                         }
                         */

@@ -20,7 +20,7 @@ public class Batch {
 
     public void append(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value, long ts) {
         ByteBuffer comparableSrc = ByteBuffer.wrap(srcVertex);
-        DBKey dbKey = new DBKey(srcVertex, dstKey, edgeType.get(), ts);
+        DBKey dbKey = new DBKey(srcVertex, dstKey, edgeType.get());
 
         KeyValue kv = new KeyValue();
         kv.setKey(dbKey.toKey());

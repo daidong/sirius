@@ -58,7 +58,7 @@ public class SyncTravelEngine {
 
     public boolean isStepStarted(long travelId, int stepId){
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return false;
         }
         return this.travel_status.get(travelId).isStepStarted(stepId);
@@ -66,7 +66,7 @@ public class SyncTravelEngine {
 
     public void setStepStarted(long travelId, int stepId){
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return;
         }
         this.travel_status.get(travelId).setStepStarted(stepId);
@@ -74,7 +74,7 @@ public class SyncTravelEngine {
 
     public HashSet<ByteBuffer> getSyncTravelVertices(long travelId, int stepId) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return null;
         }
         return this.travel_status.get(travelId).getSyncTravelVertices(stepId);
@@ -88,7 +88,7 @@ public class SyncTravelEngine {
 
     public HashSet<ByteBuffer> getSyncTravelEdges(long travelId, int stepId) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return null;
         }
         return this.travel_status.get(travelId).getSyncTravelEdges(stepId);
@@ -102,7 +102,7 @@ public class SyncTravelEngine {
 
     private void removeFromSyncServers(long travelId, int stepId, int src, int dst, int type) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return;
         }
         this.travel_status.get(travelId).removeFromSyncServers(stepId, src, dst, type);
@@ -110,7 +110,7 @@ public class SyncTravelEngine {
 
     private boolean isSyncServerEmpty(long travelId, int stepId) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return false;
         }
         return this.travel_status.get(travelId).isSyncServerEmpty(stepId);
@@ -118,7 +118,7 @@ public class SyncTravelEngine {
 
     private HashSet<SyncTravelStatus.SyncServerPair> getSyncServers(long travelId, int stepId) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return null;
         }
         return this.travel_status.get(travelId).getSyncServers(stepId);
@@ -127,7 +127,7 @@ public class SyncTravelEngine {
     // Sync Results Operations
     private void addToTravelResults(long travelId, List<KeyValue> vals) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return;
         }
         this.travel_status.get(travelId).addToTravelResult(vals);
@@ -141,7 +141,7 @@ public class SyncTravelEngine {
     // Sync Time Operations
     private long getStartSyncTravelTime(long travelId) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return 0;
         }
         return this.travel_status.get(travelId).syncMasterStartAt;
@@ -154,7 +154,7 @@ public class SyncTravelEngine {
 
     public ArrayList<SingleStep> getSyncTravelPlan(long travelId) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return null;
         }
         return this.travel_status.get(travelId).getTravelPlan();
@@ -168,7 +168,7 @@ public class SyncTravelEngine {
 
     public long getEdge2DstLocalCounter(long travelId) {
         if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus instance exists for travelId: %d", travelId);
+            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
             return 0L;
         }
         return this.travel_status.get(travelId).getEdge2DstLocalCounter();
@@ -177,7 +177,7 @@ public class SyncTravelEngine {
     private HashMap<Integer, HashSet<ByteBuffer>> getVertexBroadcastServers(List<byte[]> keySet) {
         HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = new HashMap<>();
         for (byte[] key : keySet) {
-            Set<Integer> servers = instance.getVertexLocation(key);
+            Set<Integer> servers = instance.getVertexLoc(key);
             for (int s : servers) {
                 if (!perServerVertices.containsKey(s)) {
                     perServerVertices.put(s, new HashSet<ByteBuffer>());
@@ -273,7 +273,7 @@ public class SyncTravelEngine {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(s);
                 client.syncTravel(tc1);
                 /*
-                Client client = instance.getClientConn(s);
+                Client client = inst.getClientConn(s);
                 synchronized (client) {
                     client.syncTravel(tc1);
                 }
@@ -296,7 +296,7 @@ public class SyncTravelEngine {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(s);
                 client.syncTravelStart(tc1);
                 /*
-                Client client = instance.getClientConn(s);
+                Client client = inst.getClientConn(s);
                 synchronized (client) {
                     client.syncTravelStart(tc1);
                 }
@@ -372,14 +372,14 @@ public class SyncTravelEngine {
         int srcServer = tc.getGet_from();
         int dstServer = tc.getLocal_id();
 
-        //GLogger.info("R TR %d %d %d", instance.getLocalIdx(), srcServer, System.nanoTime());
+        //GLogger.info("R TR %d %d %d", inst.getLocalIdx(), srcServer, System.nanoTime());
         GLogger.info("R TR %d %d %d", instance.getLocalIdx(), dstServer, System.nanoTime());
 
         for (int i = 0; i < instance.serverNum; i++){
                 removeFromSyncServers(travelId, stepId, i, dstServer, 0);
         }
         //GLogger.warn("[%d] stepId[%d] sync servers: %s",
-        //        instance.getLocalIdx(), stepId, getSyncServers(travelId, stepId));
+        //        inst.getLocalIdx(), stepId, getSyncServers(travelId, stepId));
 
         //removeFromSyncServers(travelId, stepId, srcServer, dstServer, 0);
         if (tc.isSetVals()) {
@@ -389,7 +389,7 @@ public class SyncTravelEngine {
 
         long costTime = System.currentTimeMillis() - getStartSyncTravelTime(travelId);
         //GLogger.info("[%d] TravelId [%d] costs: %d from %d, Edge->Dst Local Counter[%d]",
-        //        instance.localIdx, travelId, costTime, dstServer, getEdge2DstLocalCounter(travelId));
+        //        inst.localIdx, travelId, costTime, dstServer, getEdge2DstLocalCounter(travelId));
 
         if (isSyncServerEmpty(travelId, stepId)) {
             GLogger.warn("Step %d Finishes at %d", stepId, costTime);
@@ -428,7 +428,7 @@ public class SyncTravelEngine {
                         TGraphFSServer.Client client = instance.getClientConnWithPool(s);
                         client.deleteSyncTravelInstance(tc);
                         /*
-                        Client client = instance.getClientConn(s);
+                        Client client = inst.getClientConn(s);
                         synchronized (client) {
                             client.deleteSyncTravelInstance(tc);
                         }
@@ -478,16 +478,16 @@ public class SyncTravelEngine {
             }
 
             //GLogger.warn("[%d] stepId[%d] sync servers: %s",
-            //        instance.getLocalIdx(), stepId, getSyncServers(travelId, stepId));
+            //        inst.getLocalIdx(), stepId, getSyncServers(travelId, stepId));
 
         } else {
             //GLogger.warn("[%d] stepId[%d] receives %d -> %d (%d)",
-            //        instance.getLocalIdx(), stepId, src, dst, type);
+            //        inst.getLocalIdx(), stepId, src, dst, type);
 
             removeFromSyncServers(travelId, stepId, src, dst, type);
 
             //GLogger.warn("[%d] stepId[%d] sync servers: %s",
-            //        instance.getLocalIdx(), stepId, getSyncServers(travelId, stepId));
+            //        inst.getLocalIdx(), stepId, getSyncServers(travelId, stepId));
 
             long costTime = System.currentTimeMillis() - getStartSyncTravelTime(travelId);
 
@@ -514,13 +514,13 @@ public class SyncTravelEngine {
                     aclient.syncTravelStart(tc1, new SendTraverlStartCallback(s));
 
                 /*
-                TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConn(s);
+                TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConn(s);
                 synchronized (aclient) {
                     aclient.syncTravelStart(tc1, new SendTraverlStartCallback(s));
                 }
                 */
                 }
-                //instance.workerPool.execute(new SendTravelStart(instance, this, travelId, stepId, replyTo, ts));
+                //inst.workerPool.execute(new SendTravelStart(inst, this, travelId, stepId, replyTo, ts));
             }
         }
 
@@ -548,13 +548,13 @@ public class SyncTravelEngine {
     /*
     private class SendTravelStart implements Runnable {
 
-        AbstractSrv instance;
+        AbstractSrv inst;
         SyncTravelEngine engine;
         long travelId, ts;
         int stepId, replyTo;
 
-        public SendTravelStart(AbstractSrv instance, SyncTravelEngine e, long tid, int sid, int rto, long ts) {
-            this.instance = instance;
+        public SendTravelStart(AbstractSrv inst, SyncTravelEngine e, long tid, int sid, int rto, long ts) {
+            this.inst = inst;
             this.engine = e;
             this.travelId = tid;
             this.ts = ts;
@@ -569,15 +569,15 @@ public class SyncTravelEngine {
             ArrayList<SyncTravelStatus.SyncServerPair> addrNoConcurrents = new ArrayList<>(addrs);
             TravelCommand tc1 = new TravelCommand();
             tc1.setType(TravelCommandType.SYNC_TRAVEL_START).setTravelId(travelId).setStepId(stepId + 1)
-                    .setReply_to(replyTo).setGet_from(instance.getLocalIdx()).setTs(ts);
+                    .setReply_to(replyTo).setGet_from(inst.getLocalIdx()).setTs(ts);
             try {
                 for (SyncTravelStatus.SyncServerPair pair : addrNoConcurrents) {
                     int s = pair.endTo;
-                    GLogger.info("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
-                    if (s == instance.getLocalIdx()) {
+                    GLogger.info("S TS %d %d %d", inst.getLocalIdx(), s, System.nanoTime());
+                    if (s == inst.getLocalIdx()) {
                         syncTravelStart(tc1);
                     } else {
-                        Client client = instance.getClientConn(s);
+                        Client client = inst.getClientConn(s);
                         synchronized (client) {
                             client.syncTravelStart(tc1);
                         }
