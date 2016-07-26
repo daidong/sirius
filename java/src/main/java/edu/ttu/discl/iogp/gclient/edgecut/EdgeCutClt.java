@@ -35,7 +35,7 @@ public class EdgeCutClt extends GraphClt {
 
     public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, long ts) throws TException {
         int dstServer = getEdgeLocation(srcVertex, this.serverNum);
-        List<KeyValue> r = getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ts);
+        List<KeyValue> r = getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get());
         return r;
     }
 
@@ -46,8 +46,7 @@ public class EdgeCutClt extends GraphClt {
 
     public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value, long ts) throws TException {
         int dstServer = getEdgeLocation(srcVertex, this.serverNum);
-        int r = getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(),
-                ByteBuffer.wrap(value), ts);
+        int r = getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ByteBuffer.wrap(value));
         return r;
     }
 
@@ -89,7 +88,7 @@ public class EdgeCutClt extends GraphClt {
         @Override
         public void run() {
             try {
-                getClientConn(server).batch_insert(null, -1, data);
+                getClientConn(server).batch_insert(data, -1);
             } catch (TException e) {
                 e.printStackTrace();
             }
@@ -107,7 +106,7 @@ public class EdgeCutClt extends GraphClt {
 
     public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long start_ts, long end_ts) throws TException {
         int dstServer = getEdgeLocation(srcVertex, this.serverNum);
-        List<KeyValue> r = getClientConn(dstServer).scan(ByteBuffer.wrap(srcVertex), edgeType.get(), null, start_ts, end_ts);
+        List<KeyValue> r = getClientConn(dstServer).scan(ByteBuffer.wrap(srcVertex), edgeType.get());
         return r;
     }
 

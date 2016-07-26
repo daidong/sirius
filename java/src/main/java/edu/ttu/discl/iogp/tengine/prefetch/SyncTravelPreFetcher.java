@@ -82,24 +82,15 @@ public class SyncTravelPreFetcher {
                         // we scan local edges, Currently and also By Default, we only keep the newest version for each data.
                         for (int edge : edgeTypes) {
                             DBKey startKey, endKey;
-                            if (start == null && end == null) { //time is reversed
-                                startKey = DBKey.MinDBKey(key, edge, ts);
-                                endKey = DBKey.MaxDBKey(key, edge, 0L);
-                            } else {                            //time is reversed
-                                startKey = new DBKey(key, start, edge, ts);
-                                endKey = new DBKey(key, end, edge, 0L);
-                            }
+                            startKey = DBKey.MinDBKey(key, edge);
+                            endKey = DBKey.MaxDBKey(key, edge);
 
                             ArrayList<KeyValue> kvs = localstore.scanKV(startKey.toKey(), endKey.toKey());
                             for (KeyValue p : kvs) {
                                 DBKey dbKey = new DBKey(p.getKey());
-                                long currTs = dbKey.ts;
                                 ByteBuffer dst = ByteBuffer.wrap(dbKey.dst);
-
-                                if (currTs <= ts) {
-                                    engine.pool.addEdge(bkey, dst);
-                                    nexts.add(dst);
-                                }
+                                engine.pool.addEdge(bkey, dst);
+                                nexts.add(dst);
                             }
                         }
                     }

@@ -30,7 +30,7 @@ public class TravelLocalReader {
 
             if (sar != null) {
                 byte[] col = sar.key();
-                DBKey newKey = new DBKey(key, col, EdgeType.STATIC_ATTR.get(), ts);
+                DBKey newKey = new DBKey(key, col, EdgeType.STATIC_ATTR.get());
                 KeyValue p = localstore.seekTo(newKey.toKey());
                 if (p != null) {
                     byte[] localVal = p.getValue();
@@ -44,7 +44,7 @@ public class TravelLocalReader {
 
             if (dar != null) {
                 byte[] col = dar.key();
-                DBKey newKey = new DBKey(key, col, EdgeType.DYNAMIC_ATTR.get(), ts);
+                DBKey newKey = new DBKey(key, col, EdgeType.DYNAMIC_ATTR.get());
                 KeyValue p = localstore.seekTo(newKey.toKey());
                 if (p != null) {
                     byte[] localVal = p.getValue();
@@ -91,28 +91,14 @@ public class TravelLocalReader {
             // we scan local edges, Currently and also By Default, we only keep the newest version for each data.
             for (int edge : edgeTypes) {
                 DBKey startKey, endKey;
-                if (start == null && end == null) { //time is reversed
-                    startKey = DBKey.MinDBKey(key, edge, ts);
-                    endKey = DBKey.MaxDBKey(key, edge, 0L);
-                } else { 							//time is reversed
-                    startKey = new DBKey(key, start, edge, ts);
-                    endKey = new DBKey(key, end, edge, 0L);
-                }
+                startKey = DBKey.MinDBKey(key, edge);
+                endKey = DBKey.MaxDBKey(key, edge);
 
                 HashSet<ByteBuffer> contains = new HashSet<ByteBuffer>();
-                //GLogger.debug("startKey: %s -> endKey: %s", startKey.toString(), endKey.toString());
                 ArrayList<KeyValue> kvs = localstore.scanKV(startKey.toKey(), endKey.toKey());
                 for (KeyValue p : kvs) {
                     DBKey dbKey = new DBKey(p.getKey());
-                    long currTs = dbKey.ts;
-                    ByteBuffer dst = ByteBuffer.wrap(dbKey.dst);
-
-                    if (currTs <= ts) {
-                        if (!contains.contains(dst)) {
-                            contains.add(dst);
-                            nextVertices.add(dbKey.dst);
-                        }
-                    }
+                    nextVertices.add(dbKey.dst);
                 }
             }
         }

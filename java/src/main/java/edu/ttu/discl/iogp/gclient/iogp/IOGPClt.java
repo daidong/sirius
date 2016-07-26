@@ -108,7 +108,7 @@ public class IOGPClt extends GraphClt {
         @Override
         public void run() {
             try {
-                getClientConn(server).batch_insert(data);
+                getClientConn(server).batch_insert(data, -1);
             } catch (TException e) {
                 e.printStackTrace();
             }

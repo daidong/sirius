@@ -221,8 +221,7 @@ public class IOGPHandler extends BaseHandler {
             inst.loc.put(src, target);
         }
         if (type == 1){
-            if (!inst.edgecounters.containsKey(src))
-                inst.edgecounters.put(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+            inst.edgecounters.putIfAbsent(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
             Counters c = inst.edgecounters.get(src);
             c.alo = c.plo;
             c.ali = c.pli;
@@ -233,8 +232,7 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public int fennel(ByteBuffer src) throws RedirectException {
-        if (!inst.edgecounters.containsKey(src))
-            inst.edgecounters.put(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+        inst.edgecounters.putIfAbsent(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
         Counters c = inst.edgecounters.get(src);
         int score = 2 * (c.pli + c.plo) - inst.size.get();
         return score;

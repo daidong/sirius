@@ -27,17 +27,15 @@ public class IOGPGraphReassigner {
 
 		@Override
 		public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
-			try {
-				fennel_score[finished] = t.getResult();
-			} catch (TException e) {
-				e.printStackTrace();
-			}
-
 			lock.lock();
 			try {
+				fennel_score[finished] = t.getResult();
+
 				if (broadcast.decrementAndGet() == 0) {
 					broadcast_finish.signal();
 				}
+			} catch (TException e) {
+				e.printStackTrace();
 			} finally {
 				lock.unlock();
 			}
@@ -95,16 +93,17 @@ public class IOGPGraphReassigner {
 
 		boolean reassign_decision = false;
 		int local_score = 2 * (c.pli + c.plo) - inst.size.get();
+		int max_score = local_score;
 
 		int target = inst.getLocalIdx();
 		for (int i = 0; i < inst.serverNum; i++)
-			if (fennel_score[i] > local_score) {
-				local_score = fennel_score[i];
+			if (fennel_score[i] > max_score) {
+				max_score = fennel_score[i];
 				target = i;
 			}
 
 		if (target != inst.getLocalIdx())
-			if (local_score - fennel_score[inst.getLocalIdx()] > 10)
+			if (max_score - local_score > 10)
 				reassign_decision = true;
 
 
@@ -114,6 +113,9 @@ public class IOGPGraphReassigner {
 		if (reassign_decision != true) return;
 
 		try {
+			/**
+			 * The order is important. First setup target, then update the hash sorce
+			 */
 			inst.getClientConn(target).reassign(src, 1, target);
 			inst.getClientConn(inst.getEdgeLoc(bsrc, inst.serverNum)).reassign(src, 0, target);
 		} catch (TException e) {

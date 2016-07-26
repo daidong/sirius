@@ -2,7 +2,6 @@ package edu.ttu.discl.iogp.gclient;
 
 import edu.ttu.discl.iogp.gclient.edgecut.EdgeCutClt;
 import edu.ttu.discl.iogp.gclient.iogp.IOGPClt;
-import edu.ttu.discl.iogp.gclient.vertexcut.VertexCutClt;
 import edu.ttu.discl.iogp.gserver.EdgeType;
 import edu.ttu.discl.iogp.tengine.travel.GTravel;
 import edu.ttu.discl.iogp.thrift.KeyValue;
@@ -153,9 +152,6 @@ public class ClientMain {
             case "edgecut":
                 client = new EdgeCutClt(0, allsrvs);
                 break;
-            case "vertexcut":
-                client = new VertexCutClt(0, allsrvs);
-                break;
             case "iogp":
                 client = new IOGPClt(0, allsrvs);
                 break;
@@ -252,9 +248,6 @@ public class ClientMain {
                 logger.info("[" + id + "] Scan time: " + (System.currentTimeMillis() - start) + " " + r.size() + " elements.");
                 break;
 
-            case "echo":
-                client.EchoTest();
-                break;
 
             default:
                 if (op.endsWith("-SyncTravel")) {

@@ -5,6 +5,7 @@ import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.tengine.SyncTravelEngine;
 import edu.ttu.discl.iogp.thrift.Dist;
 import edu.ttu.discl.iogp.thrift.KeyValue;
+import edu.ttu.discl.iogp.thrift.RedirectException;
 import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
@@ -71,13 +72,9 @@ public class EdgeCutHandler extends BaseHandler {
     }
 
     @Override
-    public int batch_insert(List<KeyValue> batches) throws TException {
+    public int batch_insert(List<KeyValue> batches, int type) throws TException {
         instance.localstore.batch_put(batches);
         return Constants.RTN_SUCC;
-    }
-
-    public int pre_checkin() throws TException {
-        return 0;
     }
 
     @Override
@@ -88,6 +85,16 @@ public class EdgeCutHandler extends BaseHandler {
     @Override
     public int split(ByteBuffer src) throws TException {
         throw new UnsupportedOperationException("Not supported yet."); 
+    }
+
+    @Override
+    public int reassign(ByteBuffer src, int type, int target) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int fennel(ByteBuffer src) throws RedirectException {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }
