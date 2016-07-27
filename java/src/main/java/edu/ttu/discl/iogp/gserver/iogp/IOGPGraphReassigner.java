@@ -4,12 +4,14 @@ import edu.ttu.discl.iogp.gserver.EdgeType;
 import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
+import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -21,12 +23,16 @@ import java.util.concurrent.locks.ReentrantLock;
 public class IOGPGraphReassigner {
 
 	class CollectEdgeCountersCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncTravel_call> {
+		ByteBuffer src;
 		int finished;
 
-		public CollectEdgeCountersCallback(int f) { finished = f; }
+		public CollectEdgeCountersCallback(ByteBuffer s, int f) { src = s; finished = f; }
 
 		@Override
 		public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
+			AtomicInteger broadcast = broadcasts.get(src);
+			final Condition broadcast_finish = broadcast_finishes.get(src);
+
 			lock.lock();
 			try {
 				fennel_score[finished] = t.getResult();
@@ -48,15 +54,16 @@ public class IOGPGraphReassigner {
 	}
 
 	public IOGPSrv inst;
-	AtomicInteger broadcast;
 	final Lock lock = new ReentrantLock();
-	final Condition broadcast_finish  = lock.newCondition();
+	ConcurrentHashMap<ByteBuffer, AtomicInteger> broadcasts;
+	ConcurrentHashMap<ByteBuffer, Condition> broadcast_finishes;
 	int fennel_score[];
 
 
 	public IOGPGraphReassigner(IOGPSrv srv){
 		inst = srv;
-		broadcast = new AtomicInteger(inst.serverNum);
+		broadcasts = new ConcurrentHashMap<>();
+		broadcast_finishes = new ConcurrentHashMap<>();
 		fennel_score = new int[inst.serverNum];
 		for (int i = 0; i < inst.serverNum; i++) fennel_score[i] = 0;
 	}
@@ -68,27 +75,42 @@ public class IOGPGraphReassigner {
 		 */
 		byte[] bsrc = NIOHelper.getActiveArray(src);
 
+		boolean jump = false;
+		broadcasts.putIfAbsent(src, new AtomicInteger(inst.serverNum));
+		AtomicInteger broadcast = broadcasts.get(src);
+		broadcast_finishes.putIfAbsent(src, lock.newCondition());
+		final Condition broadcast_finish = broadcast_finishes.get(src);
+
 		for (int i = 0; i < inst.serverNum; i++){
 			TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
 			try {
-				aclient.fennel(src, new CollectEdgeCountersCallback(i));
+				if (i != inst.getLocalIdx())
+					aclient.fennel(src, new CollectEdgeCountersCallback(src, i));
+				else {
+					fennel_score[i] = (0 - inst.size.get());
+					if (broadcast.decrementAndGet() == 0) {
+						jump = true;
+					}
+				}
 			} catch (TException e) {
 				e.printStackTrace();
 			}
 		}
 
-		lock.lock();
-		try {
-			broadcast_finish.await();
-		} finally {
-			lock.unlock();
+		if (!jump) {
+			lock.lock();
+			try {
+				broadcast_finish.await();
+			} finally {
+				lock.unlock();
+			}
 		}
 
 		/**
 		 * Second Step: Choose the best one and decide whether move the vertices or not
 		 */
 		if (!inst.edgecounters.containsKey(src))
-			inst.edgecounters.put(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+			inst.edgecounters.put(src, new Counters(Constants.REASSIGN_THRESHOLD));
 		Counters c = inst.edgecounters.get(src);
 
 		boolean reassign_decision = false;
@@ -116,8 +138,14 @@ public class IOGPGraphReassigner {
 			/**
 			 * The order is important. First setup target, then update the hash sorce
 			 */
+			int hash_loc = inst.getEdgeLoc(bsrc, inst.serverNum);
 			inst.getClientConn(target).reassign(src, 1, target);
-			inst.getClientConn(inst.getEdgeLoc(bsrc, inst.serverNum)).reassign(src, 0, target);
+
+			if (hash_loc != inst.getLocalIdx())
+				inst.getClientConn(hash_loc).reassign(src, 0, target);
+			else
+				inst.handler.reassign(src, 0, target);
+
 		} catch (TException e) {
 			e.printStackTrace();
 		}
@@ -135,7 +163,7 @@ public class IOGPGraphReassigner {
 			DBKey key = new DBKey(kv.getKey());
 			ByteBuffer bdst = ByteBuffer.wrap(key.dst);
 			if (!inst.edgecounters.containsKey(bdst))
-				inst.edgecounters.put(bdst, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+				inst.edgecounters.put(bdst, new Counters(Constants.REASSIGN_THRESHOLD));
 			Counters dstc = inst.edgecounters.get(bdst);
 
 			if (inst.loc.containsKey(bdst)

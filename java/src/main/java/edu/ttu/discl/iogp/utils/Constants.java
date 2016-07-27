@@ -7,9 +7,16 @@ public class Constants {
 	public static final int Threshold = 4096;
 	public static final int K = 3;
 	
-	public static final int RTN_SUCC = 0;
+	public final static int RTN_SUCC = 0;
 	public static final int RTN_PAR = -1;
-	
+
+	public final static int RE_ACTUAL_LOC = 0;
+	public final static int RE_VERTEX_WRONG_SRV = 1;
+	public final static int EDGE_SPLIT_WRONG_SRV = 2;
+
+	public final static int SPLIT_THRESHOLD = 60;
+	public final static int REASSIGN_THRESHOLD = 30;
+
 	public static int RETRY = 3;
 	
 	public static int LIMITS = 1 * 1024 * 1024; //1M

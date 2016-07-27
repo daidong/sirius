@@ -62,21 +62,10 @@ public abstract class GraphClt {
 
     abstract public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey) throws TException;
 
-    abstract public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, long ts) throws TException;
-
     abstract public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value) throws TException;
-
-    abstract public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value, long ts) throws TException;
-
-    abstract public int batch_insert(Batch ib);
 
     abstract public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType) throws TException;
 
-    abstract public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long ts) throws TException;
-
-    abstract public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long start_ts, long end_ts) throws TException;
-
-    abstract public HashMap<Integer, Integer> getStats();
 
     public int submitTravel(List<SingleStep> travelPlan) throws TException {
         long ts = System.currentTimeMillis();
@@ -96,7 +85,9 @@ public abstract class GraphClt {
         JSONCommand jc = new JSONCommand();
         jc.add("travel_payload", array);
 
-        tc.setType(TravelCommandType.TRAVEL_MASTER).setTravelId(0L).setStepId(0).setReply_to(0).setTs(ts).setPayload(jc.genString());
+        tc.setType(TravelCommandType.TRAVEL_MASTER)
+                .setTravelId(0L).setStepId(0).setReply_to(0)
+                .setTs(ts).setPayload(jc.genString());
         int serverId = Math.abs((int) tid) % this.serverNum;
         getClientConn(serverId).syncTravelMaster(tc);
         return 0;
@@ -120,7 +111,9 @@ public abstract class GraphClt {
         JSONCommand jc = new JSONCommand();
         jc.add("travel_payload", array);
 
-        tc.setType(TravelCommandType.SYNC_TRAVEL_MASTER).setTravelId(0L).setStepId(0).setReply_to(0).setTs(ts).setPayload(jc.genString());
+        tc.setType(TravelCommandType.SYNC_TRAVEL_MASTER)
+                .setTravelId(0L).setStepId(0).setReply_to(0)
+                .setTs(ts).setPayload(jc.genString());
         int serverId = Math.abs((int) tid) % this.serverNum;
         getClientConn(serverId).syncTravelMaster(tc);
         return 0;

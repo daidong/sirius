@@ -9,6 +9,7 @@ import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.Movement;
 import edu.ttu.discl.iogp.thrift.RedirectException;
 import edu.ttu.discl.iogp.utils.Constants;
+import edu.ttu.discl.iogp.utils.GLogger;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 
@@ -20,13 +21,6 @@ import java.util.List;
 public class IOGPHandler extends BaseHandler {
 
     public IOGPSrv inst = null;
-
-    public final static int RE_VERTEX_WRONG_SRV = 0;
-    public final static int RE_EDGE_REASSIGN_WRONG_SRV = 1;
-    public final static int RE_EDGE_SPLIT_WRONG_SRV = 2;
-
-    public final static int SPLIT_THRESHOLD = 1000;
-    public final static int REASSIGN_THRESHOLD = 100;
 
     public IOGPHandler(IOGPSrv s) {
         this.inst = s;
@@ -41,13 +35,21 @@ public class IOGPHandler extends BaseHandler {
 
         DBKey newKey = new DBKey(bsrc, bdst, type);
 
-        inst.edgecounters.putIfAbsent(src, new Counters(REASSIGN_THRESHOLD));
+        inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
         Counters c = inst.edgecounters.get(src);
 
         synchronized (c) {
-        /*
-         *  Vertex Insertion
-         */
+			/**
+			 * Initial Status. loc is empty and but current server is src's hash location
+             */
+            if (!inst.loc.containsKey(src) &&
+                    inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
+                inst.loc.put(src, inst.getLocalIdx());
+                inst.split.put(src, 0);
+            }
+            /*
+             *  Vertex Insertion
+             */
             if (type == EdgeType.STATIC_ATTR.get()
                     || type == EdgeType.DYNAMIC_ATTR.get()) {
 
@@ -59,11 +61,18 @@ public class IOGPHandler extends BaseHandler {
                     inst.size.getAndIncrement();
                 } else {
                     /**
-                     * The client is requesting a wrong server, thrown exception and ask client to re-try
+                     * The client is requesting a wrong server,
+                     * thrown exception and ask client to re-try
                      */
                     RedirectException re = new RedirectException();
-                    re.setStatus(RE_VERTEX_WRONG_SRV);
-                    throw re;
+                    if (inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
+                        re.setStatus(Constants.RE_ACTUAL_LOC);
+                        re.setTarget(inst.loc.get(src));
+                        throw re;
+                    } else {
+                        re.setStatus(Constants.RE_VERTEX_WRONG_SRV);
+                        throw re;
+                    }
                 }
                 return 0;
             }
@@ -71,14 +80,15 @@ public class IOGPHandler extends BaseHandler {
             /**
              * Edge Insertion
              */
-            if (inst.split.containsKey(src) && inst.split.get(src) == 0) {
+            if (!inst.split.containsKey(src) ||
+                    (inst.split.containsKey(src) && inst.split.get(src) == 0)) {
 
                 if (inst.loc.containsKey(src) && inst.loc.get(src) == inst.getLocalIdx()) {
 
                     inst.localstore.put(newKey.toKey(), bval);
                     inst.size.getAndIncrement();
 
-                    inst.edgecounters.putIfAbsent(dst, new Counters(REASSIGN_THRESHOLD));
+                    inst.edgecounters.putIfAbsent(dst, new Counters(Constants.REASSIGN_THRESHOLD));
 
                     if (inst.loc.containsKey(dst) && inst.loc.get(dst) == inst.getLocalIdx()) {
                         inst.edgecounters.get(src).alo += 1;
@@ -93,32 +103,43 @@ public class IOGPHandler extends BaseHandler {
                      */
                     c.edges += 1;
 
-                    if (c.edges > SPLIT_THRESHOLD) {
+                    if (c.edges > Constants.SPLIT_THRESHOLD) {
                         // need to split src's edges;
+                        GLogger.info("[%d] %s needs split", inst.getLocalIdx(), new String(bsrc));
                         try {
                             inst.spliter.splitVertex(src);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
+                        return 0;
                     }
 
-                    if (c.edges > c.last_reassign_threshold * 2) {
+                    if (c.edges > c.last_reassign_threshold) {
                         // Need to reassign again
+                        GLogger.info("[%d] %s needs reassign", inst.getLocalIdx(), new String(bsrc));
                         c.last_reassign_threshold = 2 * c.last_reassign_threshold;
                         try {
                             inst.reassigner.reassignVertex(src);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
+                        return 0;
                     }
 
                 } else {
                     /**
-                     * The client is requesting a wrong server, thrown exception and ask client to re-try
+                     * The client is requesting a wrong server,
+                     * thrown exception and ask client to re-try
                      */
                     RedirectException re = new RedirectException();
-                    re.setStatus(RE_EDGE_REASSIGN_WRONG_SRV);
-                    throw re;
+                    if (inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
+                        re.setStatus(Constants.RE_ACTUAL_LOC);
+                        re.setTarget(inst.loc.get(src));
+                        throw re;
+                    } else {
+                        re.setStatus(Constants.RE_VERTEX_WRONG_SRV);
+                        throw re;
+                    }
                 }
 
             } else { //if src has been split
@@ -128,11 +149,20 @@ public class IOGPHandler extends BaseHandler {
                     inst.size.getAndIncrement();
                 } else {
                     /**
-                     * Client is requesting a wrong server; Throw exception and ask them to re-try
+                     * Client is requesting a wrong server;
+                     * Throw exception and ask them to re-try
                      */
                     RedirectException re = new RedirectException();
-                    re.setStatus(RE_EDGE_SPLIT_WRONG_SRV);
-                    throw re;
+
+                    if (inst.getEdgeLoc(bdst, inst.serverNum) == inst.getLocalIdx()){
+                        re.setStatus(Constants.RE_ACTUAL_LOC);
+                        re.setTarget(inst.loc.get(dst));
+                        throw re;
+                    } else {
+                        re.setStatus(Constants.EDGE_SPLIT_WRONG_SRV);
+                        throw re;
+                    }
+
                 }
 
             }
@@ -143,7 +173,112 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public synchronized List<KeyValue> read(ByteBuffer src, ByteBuffer dst, int type) throws TException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        byte[] bsrc = NIOHelper.getActiveArray(src);
+        byte[] bdst = NIOHelper.getActiveArray(dst);
+
+        List<KeyValue> rtn = new ArrayList<KeyValue>();
+
+        DBKey newKey = new DBKey(bsrc, bdst, type);
+
+        inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
+        Counters c = inst.edgecounters.get(src);
+
+        synchronized (c) {
+            /**
+             * Initial Status. loc is empty and but current server is src's hash location
+             * Return empty list
+             */
+            if (!inst.loc.containsKey(src) &&
+                    inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx())
+                return rtn;
+
+            /*
+             *  Read Vertex
+             */
+            if (type == EdgeType.STATIC_ATTR.get()
+                    || type == EdgeType.DYNAMIC_ATTR.get()) {
+
+                if (inst.loc.containsKey(src) && inst.loc.get(src) == inst.getLocalIdx()) {
+                    /**
+                     * the vertex is stored locally
+                     */
+                    byte[] value = inst.localstore.get(newKey.toKey());
+                    rtn.add(new KeyValue(ByteBuffer.wrap(newKey.toKey()),
+                            ByteBuffer.wrap(value)));
+                } else {
+                    /**
+                     * The client is requesting a wrong server,
+                     * thrown exception and ask client to re-try
+                     */
+                    RedirectException re = new RedirectException();
+                    if (inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
+                        re.setStatus(Constants.RE_ACTUAL_LOC);
+                        re.setTarget(inst.loc.get(src));
+                        throw re;
+                    } else {
+                        re.setStatus(Constants.RE_VERTEX_WRONG_SRV);
+                        throw re;
+                    }
+                }
+                return rtn;
+            }
+
+            /**
+             * Read Edge
+             */
+            if (!inst.split.containsKey(src) ||
+                    (inst.split.containsKey(src) && inst.split.get(src) == 0)) {
+
+                if (inst.loc.containsKey(src) && inst.loc.get(src) == inst.getLocalIdx()) {
+
+                    byte[] value = inst.localstore.get(newKey.toKey());
+                    rtn.add(new KeyValue(ByteBuffer.wrap(newKey.toKey()),
+                            ByteBuffer.wrap(value)));
+
+                } else {
+                    /**
+                     * The client is requesting a wrong server,
+                     * thrown exception and ask client to re-try
+                     */
+                    RedirectException re = new RedirectException();
+                    if (inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
+                        re.setStatus(Constants.RE_ACTUAL_LOC);
+                        re.setTarget(inst.loc.get(src));
+                        throw re;
+                    } else {
+                        re.setStatus(Constants.RE_VERTEX_WRONG_SRV);
+                        throw re;
+                    }
+                }
+
+            } else { //if src has been split
+
+                if (inst.loc.containsKey(dst) && inst.loc.get(dst) == inst.getLocalIdx()) {
+
+                    byte[] value = inst.localstore.get(newKey.toKey());
+                    rtn.add(new KeyValue(ByteBuffer.wrap(newKey.toKey()),
+                            ByteBuffer.wrap(value)));
+
+                } else {
+                    /**
+                     * Client is requesting a wrong server;
+                     * Throw exception and ask them to re-try
+                     */
+                    RedirectException re = new RedirectException();
+                    if (inst.getEdgeLoc(bdst, inst.serverNum) == inst.getLocalIdx()){
+                        re.setStatus(Constants.RE_ACTUAL_LOC);
+                        re.setTarget(inst.loc.get(dst));
+                        throw re;
+                    } else {
+                        re.setStatus(Constants.EDGE_SPLIT_WRONG_SRV);
+                        throw re;
+                    }
+
+                }
+
+            }
+        }
+        return rtn;
     }
 
 
@@ -171,12 +306,12 @@ public class IOGPHandler extends BaseHandler {
             List<Movement> mvs = new ArrayList<>();
             for (KeyValue kv : batches) {
                 DBKey key = new DBKey(kv.getKey());
-                ByteBuffer bsrc = ByteBuffer.wrap(key.src);
-                if (inst.loc.containsKey(bsrc) && inst.loc.get(bsrc) == inst.getLocalIdx()) {
+                ByteBuffer bdst = ByteBuffer.wrap(key.dst);
+                if (inst.loc.containsKey(bdst) && inst.loc.get(bdst) == inst.getLocalIdx()) {
                     inst.localstore.put(kv.getKey(), kv.getValue());
                     inst.size.getAndIncrement();
                 } else {
-                    mvs.add(new Movement(inst.loc.get(bsrc), kv));
+                    mvs.add(new Movement(inst.loc.get(bdst), kv));
                 }
             }
             if (!mvs.isEmpty()) {
@@ -193,7 +328,7 @@ public class IOGPHandler extends BaseHandler {
                 DBKey key = new DBKey(kv.getKey());
                 ByteBuffer bdst = ByteBuffer.wrap(key.dst);
                 if (!inst.edgecounters.containsKey(bdst))
-                    inst.edgecounters.put(bdst, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+                    inst.edgecounters.put(bdst, new Counters(Constants.REASSIGN_THRESHOLD));
                 Counters dstc = inst.edgecounters.get(bdst);
 
                 if (inst.loc.containsKey(bdst)
@@ -221,7 +356,7 @@ public class IOGPHandler extends BaseHandler {
             inst.loc.put(src, target);
         }
         if (type == 1){
-            inst.edgecounters.putIfAbsent(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+            inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
             Counters c = inst.edgecounters.get(src);
             c.alo = c.plo;
             c.ali = c.pli;
@@ -232,7 +367,7 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public int fennel(ByteBuffer src) throws RedirectException {
-        inst.edgecounters.putIfAbsent(src, new Counters(IOGPHandler.REASSIGN_THRESHOLD));
+        inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
         Counters c = inst.edgecounters.get(src);
         int score = 2 * (c.pli + c.plo) - inst.size.get();
         return score;

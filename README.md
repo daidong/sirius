@@ -38,7 +38,7 @@ sh server.sh start -local -db [dbFilePrefix] -id [ThreadsNumber] -type [edgecut/
 where "id" is the number of threads, and db is the data file prefix.
 Also, you can run it in a distributed mode, in which case the "-local" parameter should not be passed and -id indicates the ID of the server node, and -srvlist must be provided to make sure each server node knows others.
 ```
-sh server.sh start -db [dbFile] -id [ServerId] -type [edgecut/iogp] -srvlists [s1:p1, s2:p2, …]
+sh server.sh start -db [dbFile] -id [ServerId] -type [edgecut/iogp] -srvlist [s1:p1, s2:p2, …]
 ```
 As you can see from parameter "-type", GraphMeta provides multiple types of servers, including Edge-Cut and IOGP. You can choose one of them as server and use corresponding clients to interact with the servers.
 

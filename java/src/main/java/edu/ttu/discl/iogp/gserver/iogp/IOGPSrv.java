@@ -40,11 +40,16 @@ public class IOGPSrv extends AbstractSrv {
         loc = new HashMap<>();
         edgecounters = new ConcurrentHashMap<>();
 
-        spliter = new IOGPGraphSplitMover(this);
-        reassigner = new IOGPGraphReassigner(this);
     }
 
     public void start() {
+		/**
+         * IOGP Workers. Have to be after init();
+         */
+        spliter = new IOGPGraphSplitMover(this);
+        spliter.startWorkers();
+        reassigner = new IOGPGraphReassigner(this);
+
         try {
             TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(this.port);
             TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);
@@ -53,7 +58,9 @@ public class IOGPSrv extends AbstractSrv {
             tArgs.protocolFactory(new TBinaryProtocol.Factory());
             TServer server = new TThreadedSelectorServer(tArgs);
             
-            GLogger.info("[%d] Starting IOGP Server at %s:%d", this.getLocalIdx(), this.localAddr, this.port);
+            GLogger.info("[%d] Starting IOGP Server at %s:%d",
+                    this.getLocalIdx(), this.localAddr, this.port);
+
             server.serve();
 
         } catch (TException e) {

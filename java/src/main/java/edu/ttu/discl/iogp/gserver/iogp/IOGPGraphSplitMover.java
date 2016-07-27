@@ -5,6 +5,7 @@ import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.Movement;
 import edu.ttu.discl.iogp.thrift.RedirectException;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
+import edu.ttu.discl.iogp.utils.GLogger;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -13,6 +14,7 @@ import org.apache.thrift.transport.TTransportException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -33,11 +35,14 @@ public class IOGPGraphSplitMover{
 
 	class SplitBroadCastCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncTravel_call>{
 		int finished;
+		ByteBuffer src;
 
-		public SplitBroadCastCallback(int f) { finished = f; }
+		public SplitBroadCastCallback(ByteBuffer s, int f) { src = s; finished = f; }
 
 		@Override
 		public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
+			AtomicInteger broadcast = broadcasts.get(src);
+			final Condition broadcast_finish = broadcast_finishes.get(src);
 			lock.lock();
 			try {
 				if (broadcast.decrementAndGet() == 0) {
@@ -56,38 +61,59 @@ public class IOGPGraphSplitMover{
 
 	public IOGPSrv inst;
 	LinkedBlockingQueue<Task> taskQueues[];
-	AtomicInteger broadcast;
 	final Lock lock = new ReentrantLock();
-	final Condition broadcast_finish  = lock.newCondition();
+	ConcurrentHashMap<ByteBuffer, AtomicInteger> broadcasts;
+	ConcurrentHashMap<ByteBuffer, Condition> broadcast_finishes;
 
 	public IOGPGraphSplitMover(IOGPSrv instance){
 		this.inst = instance;
 		taskQueues = new LinkedBlockingQueue[inst.serverNum];
+		broadcasts = new ConcurrentHashMap<>();
+		broadcast_finishes = new ConcurrentHashMap<>();
+	}
+
+	public void startWorkers(){
 		for (int i = 0; i < inst.serverNum; i++){
 			taskQueues[i] = new LinkedBlockingQueue<>();
-			new Thread(new Worker(i, taskQueues[i], inst)).run();
+			new Thread(new Worker(i, taskQueues[i], inst)).start();
 		}
-		broadcast = new AtomicInteger(inst.serverNum);
 	}
 
 	public void splitVertex(ByteBuffer src) throws InterruptedException{
 		byte[] bsrc = NIOHelper.getActiveArray(src);
+		boolean jump = false;
+
+		broadcasts.putIfAbsent(src, new AtomicInteger(inst.serverNum));
+		AtomicInteger broadcast = broadcasts.get(src);
+		broadcast_finishes.putIfAbsent(src, lock.newCondition());
+		final Condition broadcast_finish = broadcast_finishes.get(src);
 
 		for (int i = 0; i < inst.serverNum; i++){
 			TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
 			try {
-				aclient.split(src, new SplitBroadCastCallback(i));
+				if (i != inst.getLocalIdx())
+					aclient.split(src, new SplitBroadCastCallback(src, i));
+				else {
+					inst.handler.split(src);
+					if (broadcast.decrementAndGet() == 0) {
+						jump = true;
+					}
+				}
 			} catch (TException e) {
 				e.printStackTrace();
 			}
 		}
 
-		lock.lock();
-		try {
-			broadcast_finish.await();
-		} finally {
-			lock.unlock();
+		if (!jump) {
+			lock.lock();
+			try {
+				broadcast_finish.await();
+			} finally {
+				lock.unlock();
+			}
 		}
+
+		broadcasts.remove(src);
 
 		DBKey startKey = DBKey.MinDBKey(bsrc);
 		DBKey endKey = DBKey.MaxDBKey(bsrc);
@@ -102,8 +128,10 @@ public class IOGPGraphSplitMover{
 			loadsOnEachServer.get(hash_target).add(kv);
 		}
 		for (int target : loadsOnEachServer.keySet()){
-			Task t = new Task(loadsOnEachServer.get(target));
-			taskQueues[target].put(t);
+			if (target != inst.getLocalIdx()) {
+				Task t = new Task(loadsOnEachServer.get(target));
+				taskQueues[target].put(t);
+			}
 		}
 
 	}
@@ -148,11 +176,11 @@ public class IOGPGraphSplitMover{
 									e1.printStackTrace();
 								}
 							}
+							inst.size.addAndGet(e.getReSize() - kvs.size());
+
 						} catch (TException e) {
 							e.printStackTrace();
 						}
-
-						inst.size.addAndGet(0 - kvs.size());
 					}
 
 				} catch (InterruptedException e) {

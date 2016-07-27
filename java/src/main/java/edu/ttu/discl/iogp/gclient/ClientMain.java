@@ -42,7 +42,7 @@ public class ClientMain {
         // test classpath
         try {
             //test if module dependency is in the classpath.
-            Class.forName("org.gmd.commons.ClientMain");
+            Class.forName("edu.ttu.discl.iogp.gclient.ClientMain");
             //test if other dependencies are in the classpath.
             Class.forName("org.apache.commons.lang.WordUtils");
         } catch (ClassNotFoundException e) {
@@ -64,8 +64,7 @@ public class ClientMain {
                 .build());
 
         options.addOption(Option.builder("id").hasArg()
-                .desc("ID of the distributed server or "
-                        + "total number of threads in a standalone server")
+                .desc("ID of the concurrent clients")
                 .build());
 
         options.addOption(Option.builder("graph").hasArg()
@@ -87,18 +86,18 @@ public class ClientMain {
 
             if (args.length == 0) {
                 HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp("gmd-client", options);
+                formatter.printHelp("iogp-client", options);
                 System.exit(0);
             }
 
             if (line.hasOption("help")) {
                 HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp("gmd-client", options);
+                formatter.printHelp("iogp-client", options);
                 System.exit(0);
             }
 
             if (line.hasOption("type")) {
-                rst[0] = line.getOptionValue("type", "giga");
+                rst[0] = line.getOptionValue("type", "iogp");
             } else {
                 throw new ParseException("argument 'type' is required.");
             }
@@ -173,59 +172,23 @@ public class ClientMain {
 
         switch (op) {
 
-            case "singledir":
-                logger.info("Start Singledir on " + id);
-                start = System.currentTimeMillis();
-                for (int i = 0; i < 10240; i++) {
-                    byte[] src = "vertex0".getBytes();
-                    byte[] dst = ("vertex" + (10240 * id + 1 + i)).getBytes();
-                    byte[] val = new byte[128];
-                    //long init = System.currentTimeMillis();
-                    client.insert(src, EdgeType.IN, dst, val);
-                    //long last = System.currentTimeMillis() - init;
-                    //logger.info("[" + id + "] singledir insert " + new String(dst) + " cost: " + last);
-                    //long curr = System.currentTimeMillis();
-                    //long ts = (curr - start);
-                    //start = curr;
-                    //ClientMain.responseTime.update(ts);
-                }
-
-                logger.info("[" + id + "] Single Dir Insert time: " + (System.currentTimeMillis() - start));
-                break;
-
             case "insert":
 
                 br = new BufferedReader(new FileReader(graphFile));
-                /*
-                 while ((line = br.readLine()) != null) {
-                 inMemoryGraph.add(line);
-                 }
-                 start = System.currentTimeMillis();
-                 for (String l : inMemoryGraph) {
-                 String[] splits = l.split(" ");
-                 byte[] src = splits[0].getBytes();
-                 byte[] dst = splits[1].getBytes();
-                 byte[] val = splits[2].getBytes();
-                 client.insert(src, EdgeType.RUN, dst, val);
-                 //logger.info("insert: " + new String(src) + ":" + new String(dst));
-                 }
-                 */
-                String payload128 = "a";
-                /* to mimic the column-style LSM from IndexFS
-                for (int i = 0; i < 128; i++) {
-                    payload128 += "a";
-                }
-                */
+
+                String payload128 = "";
+                for (int i = 0; i < 128; i++) payload128 += "a";
                 byte[] val = payload128.getBytes();
+
                 start = System.currentTimeMillis();
                 while ((line = br.readLine()) != null) {
                     long sts = System.currentTimeMillis();
                     String[] splits = line.split(" ");
                     byte[] src = splits[0].getBytes();
                     byte[] dst = splits[1].getBytes();
-                    client.insert(src, EdgeType.IN, dst, val);
-                    //ClientMain.responseTime.update((System.currentTimeMillis() - sts));
-                    logger.info("[" + id + "] Insert " + new String(src) + ":" + new String(dst) + " time: " + (System.currentTimeMillis() - sts));
+
+                    client.insert(src, EdgeType.OUT, dst, val);
+                    client.insert(dst, EdgeType.IN, src, val);
                 }
                 logger.info("[" + id + "] Insert time: " + (System.currentTimeMillis() - start));
                 break;
@@ -237,15 +200,19 @@ public class ClientMain {
                     int degree = Integer.parseInt(splits[0]);
                     start = System.currentTimeMillis();
                     List<KeyValue> r = client.scan(("vertex" + splits[1]).getBytes(), EdgeType.IN);
-                    logger.info("[" + id + "] Scan vertex" + splits[1] + "[" + degree
-                            + "] " + (System.currentTimeMillis() - start) + " " + r.size() + " elements.");
+                    logger.info("[" + id + "] Scan vertex" + splits[1] +
+                            "[" + degree + "] " +
+                            (System.currentTimeMillis() - start) +
+                            " " + r.size() + " elements.");
                 }
                 break;
 
             case "scan":
                 start = System.currentTimeMillis();
                 List<KeyValue> r = client.scan(("vertex" + id).getBytes(), EdgeType.IN);
-                logger.info("[" + id + "] Scan time: " + (System.currentTimeMillis() - start) + " " + r.size() + " elements.");
+                logger.info("[" + id + "] Scan time: " +
+                        (System.currentTimeMillis() - start) +
+                        " " + r.size() + " elements.");
                 break;
 
 
@@ -263,22 +230,8 @@ public class ClientMain {
                     gt.v();
 
                     client.submitSyncTravel(gt.plan());
-                    logger.info("SYNC [" + trav_round + "] Steps, VID[" + vid + "]: " + (System.currentTimeMillis() - start) + ".");
-
-                } else if (op.endsWith("-ASyncTravel")) {
-                    start = System.currentTimeMillis();
-                    int trav_round = Integer.valueOf(op.split("-")[0]);
-
-                    String vid = String.valueOf(id);
-                    GTravel gt = new GTravel();
-                    gt.v(("vertex" + vid).getBytes());
-                    for (int i = 0; i < trav_round; i++) {
-                        gt.et(bEdge).next();
-                    }
-                    gt.v();
-
-                    client.submitTravel(gt.plan());
-                    logger.info("ASYNC [" + trav_round + "] Steps, VID[" + vid + "]: " + (System.currentTimeMillis() - start) + ".");
+                    logger.info("SYNC [" + trav_round + "] Steps, VID[" + vid + "]: "
+                            + (System.currentTimeMillis() - start) + ".");
 
                 } else if (op.endsWith("-FullSyncTravel")) {
                     int trav_round = Integer.valueOf(op.split("-")[0]);
@@ -298,41 +251,11 @@ public class ClientMain {
 
                         start = System.currentTimeMillis();
                         client.submitSyncTravel(gt.plan());
-                        logger.info("FullSyncTravel [" + trav_round + "] Steps, VID[" + vid + "] Degree[" + degree + "]: " + (System.currentTimeMillis() - start) + ".");
+                        logger.info("FullSyncTravel [" + trav_round + "] Steps, VID[" +
+                                vid + "] Degree[" + degree + "]: " +
+                                (System.currentTimeMillis() - start) + ".");
                     }
 
-                } else if (op.endsWith("-FullASyncTravel")) {
-                    int trav_round = Integer.valueOf(op.split("-")[0]);
-
-                    br = new BufferedReader(new FileReader(summaryFile));
-                    while ((line = br.readLine()) != null) {
-                        GTravel gt = new GTravel();
-                        String[] splits = line.split(" ");
-                        int degree = Integer.parseInt(splits[0]);
-                        String vid = splits[1];
-
-                        gt.v(("vertex" + vid).getBytes());
-                        for (int i = 0; i < trav_round; i++) {
-                            gt.et(bEdge).next();
-                        }
-                        gt.v();
-
-                        start = System.currentTimeMillis();
-                        client.submitTravel(gt.plan());
-                        logger.info("FullASyncTravel [" + trav_round + "] Steps, VID[" + vid + "] Degree[" + degree + "]: " + (System.currentTimeMillis() - start) + ".");
-
-                        /**
-                         * This is added because currently asynchronous
-                         * traversal does not have a good tracing
-                         * infrastructure. To avoid the interferences between
-                         * different traversal requests, we force a sleep.
-                         */
-                        try {
-                            Thread.sleep(200 * (degree / 50 + 1) * trav_round);
-                        } catch (InterruptedException ex) {
-                            Logger.getLogger(ClientMain.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-                    }
                 } else {
                     System.out.println("Undefined Op!");
                 }

@@ -6,7 +6,9 @@ import edu.ttu.discl.iogp.gserver.EdgeType;
 import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.tengine.travel.GTravel;
 import edu.ttu.discl.iogp.thrift.KeyValue;
+import edu.ttu.discl.iogp.thrift.RedirectException;
 import edu.ttu.discl.iogp.utils.ArrayPrimitives;
+import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -22,109 +24,103 @@ public class IOGPClt extends GraphClt {
 
     private static final Logger logger = LoggerFactory.getLogger(IOGPClt.class);
 
+    HashMap<ByteBuffer, Integer> cachedLocationInfo = new HashMap<>();
+
     public IOGPClt(int port, ArrayList<String> alls) {
         super(port, alls);
     }
 
-    public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey) throws TException {
-        long ts = System.currentTimeMillis();
-        return read(srcVertex, edgeType, dstKey, ts);
+    private int getLocationFromCache(byte[] src){
+        if (cachedLocationInfo.containsKey(ByteBuffer.wrap(src)))
+            return cachedLocationInfo.get(ByteBuffer.wrap(src));
+        else
+            return getEdgeLocation(src, this.serverNum);
+    }
+    private void updateLocationToCache(byte[] src, int target){
+        cachedLocationInfo.put(ByteBuffer.wrap(src), target);
+    }
+    private void invaidLocationCache(byte[] src){
+        cachedLocationInfo.remove(ByteBuffer.wrap(src));
     }
 
-    public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, long ts) throws TException {
-        //int dstServer = HashKeyLocation.getEdgeLoc(srcVertex, this.serverNum);
-        int dstServer = getEdgeLocation(dstKey, this.serverNum);
-        List<KeyValue> r = getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get());
-        return r;
-    }
+    public List<KeyValue> read(byte[] srcVertex,
+                               EdgeType edgeType,
+                               byte[] dstKey) throws TException {
 
-    public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value) throws TException {
-        long ts = System.currentTimeMillis();
-        return insert(srcVertex, edgeType, dstKey, value, ts);
-    }
+        int target = getLocationFromCache(srcVertex);
+        int retry = 0;
+        boolean split = false;
 
-    private byte[] combine(byte[] a, byte[] b) {
-        byte[] c = new byte[a.length + b.length];
-        System.arraycopy(a, 0, c, 0, a.length);
-        System.arraycopy(b, 0, c, a.length, b.length);
-        return c;
-    }
-
-    public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value, long ts) throws TException {
-        int dstServer = getEdgeLocation(combine(srcVertex, dstKey), this.serverNum);
-        int r = getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ByteBuffer.wrap(value));
-        return r;
-    }
-
-    @Override
-    public int batch_insert(Batch b) {
-        ArrayList<Thread> threads = new ArrayList<Thread>();
-        HashMap<Integer, ArrayList<KeyValue>> preServerData = new HashMap<>();
-
-        for (ByteBuffer key : b.keySet()) {
-            byte[] srcVertex = NIOHelper.getActiveArray(key);
-            List<KeyValue> data = b.getEntries(key);
-            for (KeyValue kv : data) {
-                DBKey dbKey = new DBKey(kv.getKey());
-                byte[] dstVertex = dbKey.dst;
-                int dstServer = getEdgeLocation(combine(srcVertex, dstVertex), this.serverNum);
-                if (!preServerData.containsKey(dstServer)) {
-                    preServerData.put(dstServer, new ArrayList<KeyValue>());
-                }
-                preServerData.get(dstServer).add(kv);
-
-            }
-        }
-
-        for (int s : preServerData.keySet()) {
-            List<KeyValue> data = preServerData.get(s);
-            Thread t = new Thread(new BatchInsertionReceiver(s, data));
-            threads.add(t);
-            t.start();
-
-        }
-
-        for (Thread t : threads) {
+        while (true) {
             try {
-                t.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+                List<KeyValue> rtn = getClientConn(target).read(ByteBuffer.wrap(srcVertex),
+                        ByteBuffer.wrap(dstKey),
+                        edgeType.get());
+                updateLocationToCache(srcVertex, target);
+                return rtn;
 
-        return 0;
+            } catch (RedirectException re) {
+                invaidLocationCache(srcVertex);
+
+                int status = re.getStatus();
+                if (status == Constants.RE_ACTUAL_LOC)
+                    target = re.getTarget();
+                else if (status == Constants.RE_VERTEX_WRONG_SRV)
+                    target = getEdgeLocation(srcVertex, this.serverNum);
+                else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == false) {
+                    split = true;
+                    target = getLocationFromCache(dstKey);
+                } else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true)
+                    target = getEdgeLocation(dstKey, this.serverNum);
+            }
+            if (retry++ > Constants.RETRY)
+                break;
+        }
+        return (new ArrayList<KeyValue>());
     }
 
-    private class BatchInsertionReceiver implements Runnable {
 
-        int server;
-        List<KeyValue> data;
+    public int insert(byte[] srcVertex,
+                      EdgeType edgeType,
+                      byte[] dstKey,
+                      byte[] value) throws TException {
 
-        public BatchInsertionReceiver(int sid, List<KeyValue> data) {
-            this.server = sid;
-            this.data = data;
-        }
+        int target = getLocationFromCache(srcVertex);
+        int retry = 0;
+        boolean split = false;
 
-        @Override
-        public void run() {
+        while (true) {
             try {
-                getClientConn(server).batch_insert(data, -1);
-            } catch (TException e) {
-                e.printStackTrace();
+                getClientConn(target).insert(ByteBuffer.wrap(srcVertex),
+                        ByteBuffer.wrap(dstKey),
+                        edgeType.get(),
+                        ByteBuffer.wrap(value));
+                break;
+
+            } catch (RedirectException re) {
+                int status = re.getStatus();
+                invaidLocationCache(srcVertex);
+
+                if (status == Constants.RE_ACTUAL_LOC)
+                    target = re.getTarget();
+                else if (status == Constants.RE_VERTEX_WRONG_SRV)
+                    target = getEdgeLocation(srcVertex, this.serverNum);
+                else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == false) {
+                    split = true;
+                    target = getLocationFromCache(dstKey);
+                } else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true)
+                    target = getEdgeLocation(dstKey, this.serverNum);
             }
+            if (retry++ > Constants.RETRY)
+                break;
         }
+        updateLocationToCache(srcVertex, target);
+        return Constants.RTN_SUCC;
     }
 
-    public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType) throws TException {
-        long ts = System.currentTimeMillis();
-        return scan(srcVertex, edgeType, ts);
-    }
+    public List<KeyValue> scan(byte[] srcVertex,
+                               EdgeType edgeType) throws TException {
 
-    public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long ts) throws TException {
-        return scan(srcVertex, edgeType, ts, ts);
-    }
-
-    public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long start_ts, long end_ts) throws TException {
         ByteBuffer comparableKey = ByteBuffer.wrap(srcVertex);
 
         ArrayList<KeyValue> rtn = new ArrayList<>();
@@ -137,9 +133,8 @@ public class IOGPClt extends GraphClt {
 
         ArrayList<Thread> threads = new ArrayList<Thread>();
         for (int server : reqs) {
-            Thread t = new Thread(new AsyncReceiver(server, 
-                    srcVertex, edgeType.get(), 
-                    start_ts, end_ts, synRtn));
+            Thread t = new Thread(new AsyncReceiver(server,
+                    srcVertex, edgeType.get(), synRtn));
             threads.add(t);
             t.start();
         }
@@ -153,24 +148,16 @@ public class IOGPClt extends GraphClt {
         return rtn;
     }
 
-    @Override
-    public HashMap<Integer, Integer> getStats() {
-        return null;
-    }
-
     private class AsyncReceiver implements Runnable {
 
         int server, type;
         List<KeyValue> receiver;
         byte[] srcVertex;
-        long start, end;
 
-        public AsyncReceiver(int sid, byte[] src, int type, long start, long end, List<KeyValue> receiver) {
+        public AsyncReceiver(int sid, byte[] src, int type, List<KeyValue> receiver) {
             this.server = sid;
             this.srcVertex = src;
             this.type = type;
-            this.start = start;
-            this.end = end;
             this.receiver = receiver;
         }
 

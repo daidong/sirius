@@ -1,7 +1,7 @@
 package edu.ttu.discl.iogp.utils;
 
-import java.util.ArrayList;
-import java.util.Random;
+import java.io.*;
+import java.util.*;
 
 /**
  * Graph generator based on the R-MAT algorithm
@@ -140,27 +140,64 @@ public class RMATGraphGenerator {
     	}
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         int k = 0;
         int numVertices = Integer.parseInt(args[k++]);
         long numEdges = Long.parseLong(args[k++]);
+		String file = args[k++];
+		String sum = args[k++];
 
+		/*
         double pA = Double.parseDouble(args[k++]);
         double pB = Double.parseDouble(args[k++]);
         double pC = Double.parseDouble(args[k++]);
         double pD = Double.parseDouble(args[k++]);
+		*/
+		long t = System.currentTimeMillis();
 
-        System.out.println("Going to create graph with approx. " + numVertices + " vertices and " + numEdges + " edges");
+		double pA = 0.45, pB = 0.15, pC = 0.15, pD = 0.25;
 
-        long t = System.currentTimeMillis();
-        RMATGraphGenerator generator = new RMATGraphGenerator(pA, pB, pC, pD, numVertices, numEdges);
+        HashMap<Integer, Integer> degreeMap = new HashMap<Integer, Integer>();
+		TreeMap<Integer, TreeSet<Integer>> reversedMap = new TreeMap<Integer, TreeSet<Integer>>();
+
+		RMATGraphGenerator generator = new RMATGraphGenerator(pA, pB, pC, pD, numVertices, numEdges);
         generator.execute();
-        /*
-        for(Edge e : generator.generated){
-        	System.out.println("Edge: " + e);
-        }
-        */
-        System.out.println("Generating took " + (System.currentTimeMillis() - t) * 0.001 + " secs");
+
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(file))));
+		BufferedWriter summary = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(sum))));
+
+		for (Edge e : generator.generated) {
+			String data = ("vertex" + e.src) + " " + ("vertex" + e.dst);
+			bw.write(data);
+			bw.newLine();
+
+			if (!degreeMap.containsKey(e.src)) {
+				degreeMap.put(e.src, 0);
+			}
+			int value = degreeMap.get(e.src);
+			degreeMap.put(e.src, value + 1);
+		}
+		bw.close();
+
+		for (int id : degreeMap.keySet()) {
+			if (!reversedMap.containsKey(degreeMap.get(id))) {
+				reversedMap.put(degreeMap.get(id), new TreeSet<Integer>());
+			}
+			reversedMap.get(degreeMap.get(id)).add(id);
+		}
+
+		for (int degree : reversedMap.keySet()) {
+			summary.write(String.valueOf(degree));
+			summary.write(" ");
+			for (int id : reversedMap.get(degree)) {
+				summary.write(String.valueOf(id));
+				summary.write(" ");
+			}
+			summary.newLine();
+		}
+		summary.close();
+
+		System.out.println("Generating took " + (System.currentTimeMillis() - t) * 0.001 + " secs");
 
     }
 

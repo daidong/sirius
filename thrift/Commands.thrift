@@ -12,7 +12,8 @@ struct Movement {
 
 exception RedirectException{
 	1: required i32 status,
-	2: optional list<Movement> re,
+	2: optional i32 target,
+	3: optional list<Movement> re,
 }
 
 struct Dist{

@@ -39,7 +39,8 @@ public class RedirectException extends TException implements org.apache.thrift.T
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("RedirectException");
 
   private static final org.apache.thrift.protocol.TField STATUS_FIELD_DESC = new org.apache.thrift.protocol.TField("status", org.apache.thrift.protocol.TType.I32, (short)1);
-  private static final org.apache.thrift.protocol.TField RE_FIELD_DESC = new org.apache.thrift.protocol.TField("re", org.apache.thrift.protocol.TType.LIST, (short)2);
+  private static final org.apache.thrift.protocol.TField TARGET_FIELD_DESC = new org.apache.thrift.protocol.TField("target", org.apache.thrift.protocol.TType.I32, (short)2);
+  private static final org.apache.thrift.protocol.TField RE_FIELD_DESC = new org.apache.thrift.protocol.TField("re", org.apache.thrift.protocol.TType.LIST, (short)3);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -48,12 +49,14 @@ public class RedirectException extends TException implements org.apache.thrift.T
   }
 
   public int status; // required
+  public int target; // optional
   public List<Movement> re; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     STATUS((short)1, "status"),
-    RE((short)2, "re");
+    TARGET((short)2, "target"),
+    RE((short)3, "re");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -70,7 +73,9 @@ public class RedirectException extends TException implements org.apache.thrift.T
       switch(fieldId) {
         case 1: // STATUS
           return STATUS;
-        case 2: // RE
+        case 2: // TARGET
+          return TARGET;
+        case 3: // RE
           return RE;
         default:
           return null;
@@ -113,12 +118,15 @@ public class RedirectException extends TException implements org.apache.thrift.T
 
   // isset id assignments
   private static final int __STATUS_ISSET_ID = 0;
+  private static final int __TARGET_ISSET_ID = 1;
   private byte __isset_bitfield = 0;
-  private static final _Fields optionals[] = {_Fields.RE};
+  private static final _Fields optionals[] = {_Fields.TARGET,_Fields.RE};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.STATUS, new org.apache.thrift.meta_data.FieldMetaData("status", org.apache.thrift.TFieldRequirementType.REQUIRED, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
+    tmpMap.put(_Fields.TARGET, new org.apache.thrift.meta_data.FieldMetaData("target", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     tmpMap.put(_Fields.RE, new org.apache.thrift.meta_data.FieldMetaData("re", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
@@ -144,6 +152,7 @@ public class RedirectException extends TException implements org.apache.thrift.T
   public RedirectException(RedirectException other) {
     __isset_bitfield = other.__isset_bitfield;
     this.status = other.status;
+    this.target = other.target;
     if (other.isSetRe()) {
       List<Movement> __this__re = new ArrayList<Movement>(other.re.size());
       for (Movement other_element : other.re) {
@@ -161,6 +170,8 @@ public class RedirectException extends TException implements org.apache.thrift.T
   public void clear() {
     setStatusIsSet(false);
     this.status = 0;
+    setTargetIsSet(false);
+    this.target = 0;
     this.re = null;
   }
 
@@ -185,6 +196,29 @@ public class RedirectException extends TException implements org.apache.thrift.T
 
   public void setStatusIsSet(boolean value) {
     __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __STATUS_ISSET_ID, value);
+  }
+
+  public int getTarget() {
+    return this.target;
+  }
+
+  public RedirectException setTarget(int target) {
+    this.target = target;
+    setTargetIsSet(true);
+    return this;
+  }
+
+  public void unsetTarget() {
+    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __TARGET_ISSET_ID);
+  }
+
+  /** Returns true if field target is set (has been assigned a value) and false otherwise */
+  public boolean isSetTarget() {
+    return EncodingUtils.testBit(__isset_bitfield, __TARGET_ISSET_ID);
+  }
+
+  public void setTargetIsSet(boolean value) {
+    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __TARGET_ISSET_ID, value);
   }
 
   public int getReSize() {
@@ -236,6 +270,14 @@ public class RedirectException extends TException implements org.apache.thrift.T
       }
       break;
 
+    case TARGET:
+      if (value == null) {
+        unsetTarget();
+      } else {
+        setTarget((Integer)value);
+      }
+      break;
+
     case RE:
       if (value == null) {
         unsetRe();
@@ -251,6 +293,9 @@ public class RedirectException extends TException implements org.apache.thrift.T
     switch (field) {
     case STATUS:
       return Integer.valueOf(getStatus());
+
+    case TARGET:
+      return Integer.valueOf(getTarget());
 
     case RE:
       return getRe();
@@ -268,6 +313,8 @@ public class RedirectException extends TException implements org.apache.thrift.T
     switch (field) {
     case STATUS:
       return isSetStatus();
+    case TARGET:
+      return isSetTarget();
     case RE:
       return isSetRe();
     }
@@ -296,6 +343,15 @@ public class RedirectException extends TException implements org.apache.thrift.T
         return false;
     }
 
+    boolean this_present_target = true && this.isSetTarget();
+    boolean that_present_target = true && that.isSetTarget();
+    if (this_present_target || that_present_target) {
+      if (!(this_present_target && that_present_target))
+        return false;
+      if (this.target != that.target)
+        return false;
+    }
+
     boolean this_present_re = true && this.isSetRe();
     boolean that_present_re = true && that.isSetRe();
     if (this_present_re || that_present_re) {
@@ -316,6 +372,11 @@ public class RedirectException extends TException implements org.apache.thrift.T
     list.add(present_status);
     if (present_status)
       list.add(status);
+
+    boolean present_target = true && (isSetTarget());
+    list.add(present_target);
+    if (present_target)
+      list.add(target);
 
     boolean present_re = true && (isSetRe());
     list.add(present_re);
@@ -339,6 +400,16 @@ public class RedirectException extends TException implements org.apache.thrift.T
     }
     if (isSetStatus()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.status, other.status);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetTarget()).compareTo(other.isSetTarget());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetTarget()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.target, other.target);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -376,6 +447,12 @@ public class RedirectException extends TException implements org.apache.thrift.T
     sb.append("status:");
     sb.append(this.status);
     first = false;
+    if (isSetTarget()) {
+      if (!first) sb.append(", ");
+      sb.append("target:");
+      sb.append(this.target);
+      first = false;
+    }
     if (isSetRe()) {
       if (!first) sb.append(", ");
       sb.append("re:");
@@ -440,7 +517,15 @@ public class RedirectException extends TException implements org.apache.thrift.T
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 2: // RE
+          case 2: // TARGET
+            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
+              struct.target = iprot.readI32();
+              struct.setTargetIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 3: // RE
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
                 org.apache.thrift.protocol.TList _list0 = iprot.readListBegin();
@@ -480,6 +565,11 @@ public class RedirectException extends TException implements org.apache.thrift.T
       oprot.writeFieldBegin(STATUS_FIELD_DESC);
       oprot.writeI32(struct.status);
       oprot.writeFieldEnd();
+      if (struct.isSetTarget()) {
+        oprot.writeFieldBegin(TARGET_FIELD_DESC);
+        oprot.writeI32(struct.target);
+        oprot.writeFieldEnd();
+      }
       if (struct.re != null) {
         if (struct.isSetRe()) {
           oprot.writeFieldBegin(RE_FIELD_DESC);
@@ -513,10 +603,16 @@ public class RedirectException extends TException implements org.apache.thrift.T
       TTupleProtocol oprot = (TTupleProtocol) prot;
       oprot.writeI32(struct.status);
       BitSet optionals = new BitSet();
-      if (struct.isSetRe()) {
+      if (struct.isSetTarget()) {
         optionals.set(0);
       }
-      oprot.writeBitSet(optionals, 1);
+      if (struct.isSetRe()) {
+        optionals.set(1);
+      }
+      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetTarget()) {
+        oprot.writeI32(struct.target);
+      }
       if (struct.isSetRe()) {
         {
           oprot.writeI32(struct.re.size());
@@ -533,8 +629,12 @@ public class RedirectException extends TException implements org.apache.thrift.T
       TTupleProtocol iprot = (TTupleProtocol) prot;
       struct.status = iprot.readI32();
       struct.setStatusIsSet(true);
-      BitSet incoming = iprot.readBitSet(1);
+      BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
+        struct.target = iprot.readI32();
+        struct.setTargetIsSet(true);
+      }
+      if (incoming.get(1)) {
         {
           org.apache.thrift.protocol.TList _list5 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
           struct.re = new ArrayList<Movement>(_list5.size);

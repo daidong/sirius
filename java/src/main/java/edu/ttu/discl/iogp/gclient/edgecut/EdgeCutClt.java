@@ -50,51 +50,6 @@ public class EdgeCutClt extends GraphClt {
         return r;
     }
 
-    @Override
-    public int batch_insert(Batch b) {
-        ArrayList<Thread> threads = new ArrayList<Thread>();
-
-        for (ByteBuffer key : b.keySet()) {
-            byte[] srcVertex = NIOHelper.getActiveArray(key);
-            int dstServer = getEdgeLocation(srcVertex, this.serverNum);
-            List<KeyValue> data = b.getEntries(key);
-
-            Thread t = new Thread(new BatchInsertionReceiver(dstServer, data));
-            threads.add(t);
-            t.start();
-        }
-
-        for (Thread t : threads) {
-            try {
-                t.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return 0;
-    }
-
-    private class BatchInsertionReceiver implements Runnable {
-
-        int server;
-        List<KeyValue> data;
-
-        public BatchInsertionReceiver(int sid, List<KeyValue> d) {
-            this.server = sid;
-            this.data = d;
-        }
-
-        @Override
-        public void run() {
-            try {
-                getClientConn(server).batch_insert(data, -1);
-            } catch (TException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType) throws TException {
         long ts = System.currentTimeMillis();
         return scan(srcVertex, edgeType, ts);
@@ -110,10 +65,6 @@ public class EdgeCutClt extends GraphClt {
         return r;
     }
 
-    @Override
-    public HashMap<Integer, Integer> getStats() {
-        return null;
-    }
 
     public static void main(String[] args) throws TException, IOException {
         int port = Integer.parseInt(args[0]);

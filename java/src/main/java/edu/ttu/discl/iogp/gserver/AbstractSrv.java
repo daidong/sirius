@@ -51,7 +51,8 @@ public abstract class AbstractSrv {
     //public final MetricRegistry METRICS = new MetricRegistry();
     public void init() {
         if (dbFile == null || localIdx < 0 || allSrvs.isEmpty()) {
-            System.err.println("dbnum, idx or allsrvs are not well-configured. Please check the parameter.");
+            System.err.println("dbnum, idx or allsrvs are not well-configured. " +
+                    "Please check the parameter.");
             System.exit(1);
         }
         String localAddrPort = this.getAllSrvs().get(this.getLocalIdx());
@@ -110,6 +111,8 @@ public abstract class AbstractSrv {
         start();
     }
 
+    abstract public void start();
+    /*
     public void start() {
         try {
             TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(this.port);
@@ -126,6 +129,7 @@ public abstract class AbstractSrv {
             e.printStackTrace();
         }
     }
+    */
 
     public synchronized TGraphFSServer.Client getClientConn(int target) throws TTransportException {
 
