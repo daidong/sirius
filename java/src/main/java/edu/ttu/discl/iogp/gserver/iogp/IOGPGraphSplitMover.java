@@ -33,14 +33,14 @@ public class IOGPGraphSplitMover{
 		}
 	}
 
-	class SplitBroadCastCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncTravel_call>{
+	class SplitBroadCastCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.split_call>{
 		int finished;
 		ByteBuffer src;
 
 		public SplitBroadCastCallback(ByteBuffer s, int f) { src = s; finished = f; }
 
 		@Override
-		public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
+		public void onComplete(TGraphFSServer.AsyncClient.split_call t) {
 			AtomicInteger broadcast = broadcasts.get(src);
 			final Condition broadcast_finish = broadcast_finishes.get(src);
 			lock.lock();
@@ -113,7 +113,9 @@ public class IOGPGraphSplitMover{
 			}
 		}
 
+		GLogger.info("[%d] broadcast and get split done from all servers", inst.getLocalIdx());
 		broadcasts.remove(src);
+		broadcast_finishes.remove(src);
 
 		DBKey startKey = DBKey.MinDBKey(bsrc);
 		DBKey endKey = DBKey.MaxDBKey(bsrc);
@@ -149,7 +151,7 @@ public class IOGPGraphSplitMover{
 		public Worker(int t, LinkedBlockingQueue<Task> q, IOGPSrv inst){
 			target = t;
 			tasks = q;
-			inst = inst;
+			this.inst = inst;
 		}
 		@Override
 		public void run() {
@@ -161,25 +163,28 @@ public class IOGPGraphSplitMover{
 					if (task.type == 1) { //move data
 						ArrayList<KeyValue> kvs = (ArrayList<KeyValue>) task.payload;
 
-						try{
-							inst.getClientConn(target).batch_insert(kvs, 0);
-						} catch (RedirectException e) {
+						if (kvs != null) {
 
-							int status = e.getStatus();
-							for (Movement m : e.getRe()){
-								ArrayList<KeyValue> payload = new ArrayList<>();
-								payload.add(m.getKv());
+							try {
+								inst.getClientConn(target).batch_insert(kvs, 0);
+							} catch (RedirectException e) {
 
-								try {
-									inst.spliter.addDataMovementTask(m.getLoc(),payload);
-								} catch (InterruptedException e1) {
-									e1.printStackTrace();
+								int status = e.getStatus();
+								for (Movement m : e.getRe()) {
+									ArrayList<KeyValue> payload = new ArrayList<>();
+									payload.add(m.getKv());
+
+									try {
+										inst.spliter.addDataMovementTask(m.getLoc(), payload);
+									} catch (InterruptedException e1) {
+										e1.printStackTrace();
+									}
 								}
-							}
-							inst.size.addAndGet(e.getReSize() - kvs.size());
+								inst.size.addAndGet(e.getReSize() - kvs.size());
 
-						} catch (TException e) {
-							e.printStackTrace();
+							} catch (TException e) {
+								e.printStackTrace();
+							}
 						}
 					}
 

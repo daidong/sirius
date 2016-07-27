@@ -92,7 +92,7 @@ if test -e $PIDFILE
         then
 		echo Stop reading...
 		stopread
-		sleep 10s
+		sleep 5s
                 echo Stop The $SERVER_NAME Server....
                 TPID=`cat $PIDFILE`
                 kill -9 $TPID

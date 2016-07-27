@@ -5,6 +5,7 @@ import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
 import edu.ttu.discl.iogp.utils.Constants;
+import edu.ttu.discl.iogp.utils.GLogger;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -22,21 +23,20 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class IOGPGraphReassigner {
 
-	class CollectEdgeCountersCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncTravel_call> {
+	class CollectEdgeCountersCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.fennel_call> {
 		ByteBuffer src;
 		int finished;
 
 		public CollectEdgeCountersCallback(ByteBuffer s, int f) { src = s; finished = f; }
 
 		@Override
-		public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
+		public void onComplete(TGraphFSServer.AsyncClient.fennel_call t) {
 			AtomicInteger broadcast = broadcasts.get(src);
 			final Condition broadcast_finish = broadcast_finishes.get(src);
 
 			lock.lock();
 			try {
 				fennel_score[finished] = t.getResult();
-
 				if (broadcast.decrementAndGet() == 0) {
 					broadcast_finish.signal();
 				}
@@ -49,7 +49,7 @@ public class IOGPGraphReassigner {
 
 		@Override
 		public void onError(Exception e) {
-
+			GLogger.info("[%d] On Error", inst.getLocalIdx());
 		}
 	}
 
@@ -84,9 +84,9 @@ public class IOGPGraphReassigner {
 		for (int i = 0; i < inst.serverNum; i++){
 			TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
 			try {
-				if (i != inst.getLocalIdx())
+				if (i != inst.getLocalIdx()) {
 					aclient.fennel(src, new CollectEdgeCountersCallback(src, i));
-				else {
+				} else {
 					fennel_score[i] = (0 - inst.size.get());
 					if (broadcast.decrementAndGet() == 0) {
 						jump = true;
@@ -106,11 +106,14 @@ public class IOGPGraphReassigner {
 			}
 		}
 
+		GLogger.info("[%d] broadcast and get fennel score from all servers", inst.getLocalIdx());
+		broadcasts.remove(src);
+		broadcast_finishes.remove(src);
+
 		/**
 		 * Second Step: Choose the best one and decide whether move the vertices or not
 		 */
-		if (!inst.edgecounters.containsKey(src))
-			inst.edgecounters.put(src, new Counters(Constants.REASSIGN_THRESHOLD));
+		inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
 		Counters c = inst.edgecounters.get(src);
 
 		boolean reassign_decision = false;
@@ -128,6 +131,8 @@ public class IOGPGraphReassigner {
 			if (max_score - local_score > 10)
 				reassign_decision = true;
 
+		GLogger.info("vertex %s should move from %d to %d",
+				new String(bsrc), inst.getLocalIdx(), target);
 
 		/**
 		 * Third Step: Medata Update

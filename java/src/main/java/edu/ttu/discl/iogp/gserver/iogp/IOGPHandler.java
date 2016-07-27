@@ -47,6 +47,12 @@ public class IOGPHandler extends BaseHandler {
                 inst.loc.put(src, inst.getLocalIdx());
                 inst.split.put(src, 0);
             }
+
+            if (!inst.loc.containsKey(dst) &&
+                    inst.getEdgeLoc(bdst, inst.serverNum) == inst.getLocalIdx()){
+                inst.loc.put(dst, inst.getLocalIdx());
+                inst.split.put(dst, 0);
+            }
             /*
              *  Vertex Insertion
              */
@@ -147,6 +153,7 @@ public class IOGPHandler extends BaseHandler {
                 if (inst.loc.containsKey(dst) && inst.loc.get(dst) == inst.getLocalIdx()) {
                     inst.localstore.put(newKey.toKey(), bval);
                     inst.size.getAndIncrement();
+
                 } else {
                     /**
                      * Client is requesting a wrong server;
@@ -307,10 +314,17 @@ public class IOGPHandler extends BaseHandler {
             for (KeyValue kv : batches) {
                 DBKey key = new DBKey(kv.getKey());
                 ByteBuffer bdst = ByteBuffer.wrap(key.dst);
+
                 if (inst.loc.containsKey(bdst) && inst.loc.get(bdst) == inst.getLocalIdx()) {
                     inst.localstore.put(kv.getKey(), kv.getValue());
                     inst.size.getAndIncrement();
                 } else {
+                    if (!inst.loc.containsKey(bdst) &&
+                            inst.getEdgeLoc(NIOHelper.getActiveArray(bdst),
+                                    inst.serverNum) == inst.getLocalIdx())
+
+                        inst.loc.put(bdst, inst.getLocalIdx());
+
                     mvs.add(new Movement(inst.loc.get(bdst), kv));
                 }
             }
@@ -367,9 +381,11 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public int fennel(ByteBuffer src) throws RedirectException {
+        //GLogger.info("Server [%d] is serving RPC Call fennel", inst.getLocalIdx());
         inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
         Counters c = inst.edgecounters.get(src);
         int score = 2 * (c.pli + c.plo) - inst.size.get();
+        //GLogger.info("Server [%d] finish serving RPC Call fennel", inst.getLocalIdx());
         return score;
     }
 

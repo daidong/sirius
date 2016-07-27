@@ -112,24 +112,7 @@ public abstract class AbstractSrv {
     }
 
     abstract public void start();
-    /*
-    public void start() {
-        try {
-            TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(this.port);
-            TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);
-            tArgs.processor(processor);
-            tArgs.transportFactory(new TFramedTransport.Factory());
-            tArgs.protocolFactory(new TBinaryProtocol.Factory());
-            TServer server = new TThreadedSelectorServer(tArgs);
 
-            GLogger.info("[%d] Starting %s Server at %s:%d", this.getLocalIdx(), this.getClass().getSimpleName(), this.localAddr, this.port);
-            server.serve();
-
-        } catch (TException e) {
-            e.printStackTrace();
-        }
-    }
-    */
 
     public synchronized TGraphFSServer.Client getClientConn(int target) throws TTransportException {
 
