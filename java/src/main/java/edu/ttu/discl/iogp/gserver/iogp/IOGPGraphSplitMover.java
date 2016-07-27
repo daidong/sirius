@@ -55,13 +55,14 @@ public class IOGPGraphSplitMover{
 	}
 
 	public IOGPSrv inst;
-	LinkedBlockingQueue<Task> taskQueues[] = new LinkedBlockingQueue[inst.serverNum];
+	LinkedBlockingQueue<Task> taskQueues[];
 	AtomicInteger broadcast;
 	final Lock lock = new ReentrantLock();
 	final Condition broadcast_finish  = lock.newCondition();
 
 	public IOGPGraphSplitMover(IOGPSrv instance){
 		this.inst = instance;
+		taskQueues = new LinkedBlockingQueue[inst.serverNum];
 		for (int i = 0; i < inst.serverNum; i++){
 			taskQueues[i] = new LinkedBlockingQueue<>();
 			new Thread(new Worker(i, taskQueues[i], inst)).run();
