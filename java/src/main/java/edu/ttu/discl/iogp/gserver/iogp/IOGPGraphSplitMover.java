@@ -14,6 +14,7 @@ import org.apache.thrift.transport.TTransportException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -154,24 +155,23 @@ public class IOGPGraphSplitMover{
 		@Override
 		public void run() {
 			while(true){
-
 				try {
 					Task task = tasks.take();
 
 					if (task.type == 1) { //move data
 						ArrayList<KeyValue> kvs = (ArrayList<KeyValue>) task.payload;
+						List<Movement> do_it_again = new ArrayList<>();
+
 						if (kvs != null) {
 							try {
 								TGraphFSServer.Client client = inst.getClientConn(this.target);
 								synchronized (client){
-								//	GLogger.info("[%d]-[Split]-[%d] Client: %s calls batch_insert",
-								//			inst.getLocalIdx(), target, client.toString());
 									client.batch_insert(kvs, 0);
 								}
  							} catch (RedirectException e) {
 
-								int status = e.getStatus();
-								for (Movement m : e.getRe()) {
+								do_it_again = e.getRe();
+								for (Movement m : do_it_again) {
 									ArrayList<KeyValue> payload = new ArrayList<>();
 									payload.add(m.getKv());
 
@@ -181,10 +181,27 @@ public class IOGPGraphSplitMover{
 										e1.printStackTrace();
 									}
 								}
-								inst.size.addAndGet(e.getReSize() - kvs.size());
 
 							} catch (TException e) {
 								e.printStackTrace();
+							} finally {
+								int before_kvs = kvs.size();
+								inst.size.addAndGet(do_it_again.size() - kvs.size());
+								for (Movement m : do_it_again){
+									kvs.remove(m.getKv());
+								}
+								if (kvs.size() != (before_kvs - do_it_again.size())){
+									GLogger.error("[ERROR], before size: %d, do_it_again size:%d" +
+											" after size: %d", before_kvs, do_it_again.size(),
+											kvs.size());
+								}
+
+								/**
+								 * Remove local copy
+								 */
+								for (KeyValue kv : kvs) {
+									inst.localstore.remove(kv.getKey());
+								}
 							}
 						}
 					}

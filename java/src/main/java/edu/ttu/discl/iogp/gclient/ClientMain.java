@@ -3,9 +3,11 @@ package edu.ttu.discl.iogp.gclient;
 import edu.ttu.discl.iogp.gclient.edgecut.EdgeCutClt;
 import edu.ttu.discl.iogp.gclient.iogp.IOGPClt;
 import edu.ttu.discl.iogp.gserver.EdgeType;
+import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.tengine.travel.GTravel;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.utils.ArrayPrimitives;
+import edu.ttu.discl.iogp.utils.GLogger;
 import org.apache.commons.cli.*;
 import org.apache.thrift.TException;
 import org.slf4j.LoggerFactory;
@@ -24,7 +26,6 @@ public class ClientMain {
 
     static Options options = new Options();
 
-    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(ClientMain.class);
     //static final MetricRegistry metrics = new MetricRegistry();
     /*
      static {
@@ -190,29 +191,20 @@ public class ClientMain {
                     client.insert(src, EdgeType.OUT, dst, val);
                     client.insert(dst, EdgeType.IN, src, val);
                 }
-                logger.info("[" + id + "] Insert time: " + (System.currentTimeMillis() - start));
-                break;
-
-            case "fullscan":
-                br = new BufferedReader(new FileReader(summaryFile));
-                while ((line = br.readLine()) != null) {
-                    String[] splits = line.split(" ");
-                    int degree = Integer.parseInt(splits[0]);
-                    start = System.currentTimeMillis();
-                    List<KeyValue> r = client.scan(("vertex" + splits[1]).getBytes(), EdgeType.IN);
-                    logger.info("[" + id + "] Scan vertex" + splits[1] +
-                            "[" + degree + "] " +
-                            (System.currentTimeMillis() - start) +
-                            " " + r.size() + " elements.");
-                }
+                GLogger.info("[%d] Insert time: %d", id, (System.currentTimeMillis() - start));
                 break;
 
             case "scan":
                 start = System.currentTimeMillis();
-                List<KeyValue> r = client.scan(("vertex" + id).getBytes(), EdgeType.IN);
-                logger.info("[" + id + "] Scan time: " +
-                        (System.currentTimeMillis() - start) +
-                        " " + r.size() + " elements.");
+                List<KeyValue> r = client.scan(("vertex" + id).getBytes(), EdgeType.OUT);
+                GLogger.info("[%d] Scan time: %d Size: %d",
+                        id, (System.currentTimeMillis() - start), r.size());
+                /*
+                for (KeyValue kv : r){
+                    DBKey tk = new DBKey(kv.getKey());
+                    System.out.println("dst: " + new String(tk.dst));
+                }
+                */
                 break;
 
 
@@ -230,8 +222,8 @@ public class ClientMain {
                     gt.v();
 
                     client.submitSyncTravel(gt.plan());
-                    logger.info("SYNC [" + trav_round + "] Steps, VID[" + vid + "]: "
-                            + (System.currentTimeMillis() - start) + ".");
+                    GLogger.info("SYNC [%d] Steps, VID[%s]: %d.",
+                            trav_round, vid, (System.currentTimeMillis() - start));
 
                 } else if (op.endsWith("-FullSyncTravel")) {
                     int trav_round = Integer.valueOf(op.split("-")[0]);
@@ -251,9 +243,8 @@ public class ClientMain {
 
                         start = System.currentTimeMillis();
                         client.submitSyncTravel(gt.plan());
-                        logger.info("FullSyncTravel [" + trav_round + "] Steps, VID[" +
-                                vid + "] Degree[" + degree + "]: " +
-                                (System.currentTimeMillis() - start) + ".");
+                        GLogger.info("FullSyncTravel [%d] Steps, VID[%s] Degree[%d], Time:[%d]",
+                                trav_round, vid, degree, (System.currentTimeMillis() - start) + ".");
                     }
 
                 } else {

@@ -289,12 +289,28 @@ public class IOGPHandler extends BaseHandler {
                     }
 
                 }
-
             }
         }
         return rtn;
     }
 
+    @Override
+    public synchronized List<KeyValue> force_scan(ByteBuffer src, int type) throws TException{
+        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "force_scan");
+
+        byte[] bsrc = NIOHelper.getActiveArray(src);
+
+        List<KeyValue> rtn = new ArrayList<KeyValue>();
+
+        DBKey startKey = DBKey.MinDBKey(bsrc, type);
+        DBKey endKey = DBKey.MaxDBKey(bsrc, type);
+
+        ArrayList<KeyValue> kvs = inst.localstore.scanKV(startKey.toKey(), endKey.toKey());
+        rtn.addAll(kvs);
+
+        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "force_scan");
+        return rtn;
+    }
 
     @Override
     public synchronized List<KeyValue> scan(ByteBuffer src, int type) throws TException {
@@ -306,15 +322,55 @@ public class IOGPHandler extends BaseHandler {
 
         DBKey startKey = DBKey.MinDBKey(bsrc, type);
         DBKey endKey = DBKey.MaxDBKey(bsrc, type);
-        ArrayList<KeyValue> kvs = inst.localstore.scanKV(startKey.toKey(), endKey.toKey());
-        HashSet<ByteBuffer> contains = new HashSet<ByteBuffer>();
 
-        for (KeyValue kv : kvs)
-            rtn.add(kv);
+        inst.edgecounters.putIfAbsent(src, new Counters());
+        Counters c = inst.edgecounters.get(src);
+
+        synchronized (c) {
+            /**
+             * Initial Status. loc is empty and but current server is src's hash location
+             * Return empty list
+             */
+            if (!inst.loc.containsKey(src) &&
+                    inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx())
+                return rtn;
+
+            if (type == EdgeType.STATIC_ATTR.get()
+                    || type == EdgeType.DYNAMIC_ATTR.get())
+                return rtn;
+
+            /**
+             * Scan Edge
+             */
+            if (!inst.split.containsKey(src) ||
+                    (inst.split.containsKey(src) && inst.split.get(src) == 0)) {
+
+                if (inst.loc.containsKey(src) && inst.loc.get(src) == inst.getLocalIdx()) {
+                    ArrayList<KeyValue> kvs = inst.localstore.scanKV(startKey.toKey(), endKey.toKey());
+                    rtn.addAll(kvs);
+
+                } else {
+                    RedirectException re = new RedirectException();
+                    if (inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
+                        re.setStatus(Constants.RE_ACTUAL_LOC);
+                        re.setTarget(inst.loc.get(src));
+                        throw re;
+                    } else {
+                        re.setStatus(Constants.RE_VERTEX_WRONG_SRV);
+                        throw re;
+                    }
+                }
+            } else { //if src has been split
+                /**
+                 * Ask clients to re-try (broadcast)
+                 */
+                RedirectException re = new RedirectException();
+                re.setStatus(Constants.EDGE_SPLIT_WRONG_SRV);
+                throw re;
+            }
+        }
 
         GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "scan");
-
-
         return rtn;
     }
 

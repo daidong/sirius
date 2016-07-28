@@ -42,33 +42,27 @@ public class EdgeCutHandler extends BaseHandler {
         
         List<KeyValue> rtn = new ArrayList<KeyValue>();        
         DBKey newKey = new DBKey(bsrc, bdst, type);
-        KeyValue p = instance.localstore.seekTo(newKey.toKey()); //due to the time reason, we have to seek
+        KeyValue p = instance.localstore.seekTo(newKey.toKey());
         if (p != null) {
             rtn.add(p);
         }
         return rtn;
     }
 
-    /**
-     * scan: [start_ts, end_ts];
-     */
     @Override
     public synchronized List<KeyValue> scan(ByteBuffer src, int type) throws TException {
         byte[] bsrc = NIOHelper.getActiveArray(src);
-        
-        List<KeyValue> rtn = new ArrayList<KeyValue>();
-        boolean flag = false;
-
 
         DBKey startKey = DBKey.MinDBKey(bsrc, type);
         DBKey endKey = DBKey.MaxDBKey(bsrc, type);
         ArrayList<KeyValue> kvs = instance.localstore.scanKV(startKey.toKey(), endKey.toKey());
-        HashSet<ByteBuffer> contains = new HashSet<ByteBuffer>();
 
-        for (KeyValue kv : kvs) {
-            rtn.add(kv);
-        }
-        return rtn;
+        return kvs;
+    }
+
+    @Override
+    public List<KeyValue> force_scan(ByteBuffer src, int type) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override

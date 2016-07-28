@@ -206,5 +206,12 @@ public class IOGPGraphReassigner {
 			e.printStackTrace();
 		}
 
+		/**
+		 * Fifth Step: Delete local copy
+		 */
+		for (KeyValue kv : kvs) {
+			inst.localstore.remove(kv.getKey());
+		}
+
 	}
 }

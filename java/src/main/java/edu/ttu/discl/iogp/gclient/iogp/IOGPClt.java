@@ -1,5 +1,6 @@
 package edu.ttu.discl.iogp.gclient.iogp;
 
+import com.jcabi.immutable.Array;
 import edu.ttu.discl.iogp.gclient.Batch;
 import edu.ttu.discl.iogp.gclient.GraphClt;
 import edu.ttu.discl.iogp.gserver.EdgeType;
@@ -7,10 +8,12 @@ import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.tengine.travel.GTravel;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.RedirectException;
+import edu.ttu.discl.iogp.thrift.TGraphFSServer;
 import edu.ttu.discl.iogp.utils.ArrayPrimitives;
 import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
+import org.apache.thrift.async.AsyncMethodCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +22,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class IOGPClt extends GraphClt {
 
@@ -121,58 +128,100 @@ public class IOGPClt extends GraphClt {
     public List<KeyValue> scan(byte[] srcVertex,
                                EdgeType edgeType) throws TException {
 
-        ByteBuffer comparableKey = ByteBuffer.wrap(srcVertex);
+        int target = getLocationFromCache(srcVertex);
+        int retry = 0;
+        boolean split = false;
 
-        ArrayList<KeyValue> rtn = new ArrayList<>();
-        List<KeyValue> synRtn = Collections.synchronizedList(rtn);
-        HashSet<Integer> reqs = new HashSet<Integer>();
-
-        for (int i = 0; i < this.serverNum; i++) {
-            reqs.add(i);
-        }
-
-        ArrayList<Thread> threads = new ArrayList<Thread>();
-        for (int server : reqs) {
-            Thread t = new Thread(new AsyncReceiver(server,
-                    srcVertex, edgeType.get(), synRtn));
-            threads.add(t);
-            t.start();
-        }
-        for (Thread t : threads) {
+        while (!split) {
             try {
-                t.join();
+                TGraphFSServer.Client client = getClientConn(target);
+                List<KeyValue> rtn = client.scan(ByteBuffer.wrap(srcVertex), edgeType.get());
+                updateLocationToCache(srcVertex, target);
+                return rtn;
+            } catch (RedirectException re) {
+                invaidLocationCache(srcVertex);
+
+                int status = re.getStatus();
+                if (status == Constants.RE_ACTUAL_LOC)
+                    target = re.getTarget();
+                else if (status == Constants.RE_VERTEX_WRONG_SRV)
+                    target = getEdgeLocation(srcVertex, this.serverNum);
+                else if (status == Constants.EDGE_SPLIT_WRONG_SRV)
+                    split = true;
+            }
+            if (retry++ > Constants.RETRY)
+                break;
+        }
+
+        if (split) {
+            final Lock lock = new ReentrantLock();
+            AtomicInteger total_broadcast = new AtomicInteger(serverNum);
+            final Condition broadcast_finish = lock.newCondition();
+            List<KeyValue> rtn = new ArrayList<>();
+
+            try {
+                for (int i = 0; i < serverNum; i++) {
+                    TGraphFSServer.AsyncClient aclient = getAsyncClientConn(i);
+                    aclient.force_scan(ByteBuffer.wrap(srcVertex),
+                            edgeType.get(),
+                            new ScanAllCallback(lock, broadcast_finish, total_broadcast, rtn));
+                }
+
+                lock.lock();
+                try {
+                    broadcast_finish.await();
+                } finally {
+                    lock.unlock();
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            return rtn;
         }
-        return rtn;
+        return new ArrayList<KeyValue>();
     }
 
-    private class AsyncReceiver implements Runnable {
+    class ScanAllCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.force_scan_call> {
 
-        int server, type;
-        List<KeyValue> receiver;
-        byte[] srcVertex;
+        public Lock lock;
+        public AtomicInteger total_broadcast;
+        public Condition broadcast_finish;
+        List<KeyValue> rtn;
 
-        public AsyncReceiver(int sid, byte[] src, int type, List<KeyValue> receiver) {
-            this.server = sid;
-            this.srcVertex = src;
-            this.type = type;
-            this.receiver = receiver;
+        public ScanAllCallback(Lock l, Condition f, AtomicInteger total, List<KeyValue> kv){
+            lock = l;
+            total_broadcast = total;
+            broadcast_finish = f;
+            rtn = kv;
+        }
+        @Override
+        public void onComplete(TGraphFSServer.AsyncClient.force_scan_call t) {
+            lock.lock();
+            try {
+                List<KeyValue> force_scan_rtn = t.getResult();
+                /*
+                for (KeyValue kv : force_scan_rtn){
+                    DBKey k = new DBKey(kv.getKey());
+                    logger.info("In scan callback: " + new String(k.src)
+                            + " -> " + new String(k.dst));
+                }
+                */
+                rtn.addAll(force_scan_rtn);
+                if (total_broadcast.decrementAndGet() == 0)
+                    broadcast_finish.signal();
+            } catch (TException e) {
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
+            }
         }
 
         @Override
-        public void run() {
-            List<KeyValue> r = null;
-            try {
-                r = getClientConn(server).scan(ByteBuffer.wrap(srcVertex), type);
-            } catch (TException e) {
-                e.printStackTrace();
-            }
-            this.receiver.addAll(r);
+        public void onError(Exception e) {
+
         }
     }
-
     public static void main(String[] args) throws TException, IOException {
         int port = Integer.parseInt(args[0]);
         int index = Integer.parseInt(args[1]);

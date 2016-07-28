@@ -10,14 +10,14 @@ import edu.ttu.discl.iogp.thrift.TravelCommandType;
 import edu.ttu.discl.iogp.utils.GLogger;
 import edu.ttu.discl.iogp.utils.JenkinsHash;
 import org.apache.thrift.TException;
+import org.apache.thrift.async.TAsyncClientManager;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
+import org.apache.thrift.transport.*;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +28,8 @@ import java.util.logging.Logger;
 public abstract class GraphClt {
 
     public TGraphFSServer.Client[] conns;
+    public TGraphFSServer.AsyncClient[] asyncClients;
+
     public ArrayList<String> allSrvs;
     public int port;
     public int serverNum;
@@ -37,10 +39,13 @@ public abstract class GraphClt {
         this.port = port;
         this.serverNum = allSrvs.size();
         this.conns = new TGraphFSServer.Client[this.serverNum];
+        this.asyncClients = new TGraphFSServer.AsyncClient[this.serverNum];
+
         for (int i = 0; i < this.serverNum; i++) {
             String addrPort = this.allSrvs.get(i);
             String addr = addrPort.split(":")[0];
             this.port = Integer.parseInt(addrPort.split(":")[1]);
+
             //TTransport transport = new TSocket(addr, port);
             TTransport transport = new TFramedTransport(new TSocket(addr, this.port));
             try {
@@ -52,12 +57,23 @@ public abstract class GraphClt {
             TProtocol protocol = new TBinaryProtocol(transport);
             TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
             conns[i] = client;
+            try {
+                asyncClients[i] = new TGraphFSServer.AsyncClient(new TBinaryProtocol.Factory(),
+						new TAsyncClientManager(),
+						new TNonblockingSocket(addr, this.port));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
     }
 
     public TGraphFSServer.Client getClientConn(int target) throws TTransportException {
         return conns[target];
+    }
+
+    public synchronized TGraphFSServer.AsyncClient getAsyncClientConn(int target) throws TTransportException{
+        return asyncClients[target];
     }
 
     abstract public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey) throws TException;

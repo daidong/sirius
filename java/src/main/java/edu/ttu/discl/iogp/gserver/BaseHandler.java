@@ -21,6 +21,7 @@ public abstract class BaseHandler implements TGraphFSServer.Iface{
     abstract public List<KeyValue> read(ByteBuffer src, ByteBuffer dst, int type) throws RedirectException, TException;
 
     abstract public List<KeyValue> scan(ByteBuffer src, int type) throws RedirectException, TException;
+    abstract public List<KeyValue> force_scan(ByteBuffer src, int type) throws RedirectException, TException;
 
     abstract public int batch_insert(List<KeyValue> batches, int type) throws RedirectException, TException;
 
