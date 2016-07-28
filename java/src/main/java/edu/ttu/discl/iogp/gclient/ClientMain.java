@@ -171,16 +171,15 @@ public class ClientMain {
         int edge = EdgeType.IN.get();
         byte[] bEdge = ArrayPrimitives.itob(edge);
 
+        String payload128 = "";
+        for (int i = 0; i < 128; i++) payload128 += "a";
+        byte[] val = payload128.getBytes();
+
         switch (op) {
 
             case "insert":
 
                 br = new BufferedReader(new FileReader(graphFile));
-
-                String payload128 = "";
-                for (int i = 0; i < 128; i++) payload128 += "a";
-                byte[] val = payload128.getBytes();
-
                 start = System.currentTimeMillis();
                 while ((line = br.readLine()) != null) {
                     long sts = System.currentTimeMillis();
@@ -192,6 +191,53 @@ public class ClientMain {
                     client.insert(dst, EdgeType.IN, src, val);
                 }
                 GLogger.info("[%d] Insert time: %d", id, (System.currentTimeMillis() - start));
+                break;
+
+            case "insert100":
+                start = System.currentTimeMillis();
+                for (int i = 1; i <= 100; i++){
+                    byte[] src = "vertex0".getBytes();
+                    byte[] dst = ("vertex"+i).getBytes();
+
+                    client.insert(src, EdgeType.OUT, dst, val);
+                    client.insert(dst, EdgeType.IN, src, val);
+                }
+                GLogger.info("[%d] Insert100 time: %d", id, (System.currentTimeMillis() - start));
+                break;
+
+            case "insert1000":
+                start = System.currentTimeMillis();
+                for (int i = 1; i <= 1000; i++){
+                    byte[] src = "vertex0".getBytes();
+                    byte[] dst = ("vertex"+i).getBytes();
+
+                    client.insert(src, EdgeType.OUT, dst, val);
+                    client.insert(dst, EdgeType.IN, src, val);
+                }
+                GLogger.info("[%d] Insert1000 time: %d", id, (System.currentTimeMillis() - start));
+                break;
+
+            case "insert10000":
+                start = System.currentTimeMillis();
+                for (int i = 1; i <= 10000; i++){
+                    byte[] src = "vertex0".getBytes();
+                    byte[] dst = ("vertex"+i).getBytes();
+
+                    client.insert(src, EdgeType.OUT, dst, val);
+                    client.insert(dst, EdgeType.IN, src, val);
+                }
+                GLogger.info("[%d] Insert10000 time: %d", id, (System.currentTimeMillis() - start));
+                break;
+            case "insert100000":
+                start = System.currentTimeMillis();
+                for (int i = 1; i <= 100000; i++){
+                    byte[] src = "vertex0".getBytes();
+                    byte[] dst = ("vertex"+i).getBytes();
+
+                    client.insert(src, EdgeType.OUT, dst, val);
+                    client.insert(dst, EdgeType.IN, src, val);
+                }
+                GLogger.info("[%d] Insert100000 time: %d", id, (System.currentTimeMillis() - start));
                 break;
 
             case "scan":
