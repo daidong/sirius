@@ -29,13 +29,15 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public int insert(ByteBuffer src, ByteBuffer dst, int type, ByteBuffer val) throws TException {
+        //GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "insert");
+
         byte[] bsrc = NIOHelper.getActiveArray(src);
         byte[] bdst = NIOHelper.getActiveArray(dst);
         byte[] bval = NIOHelper.getActiveArray(val);
 
         DBKey newKey = new DBKey(bsrc, bdst, type);
 
-        inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
+        inst.edgecounters.putIfAbsent(src, new Counters());
         Counters c = inst.edgecounters.get(src);
 
         synchronized (c) {
@@ -74,12 +76,14 @@ public class IOGPHandler extends BaseHandler {
                     if (inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(src));
-                        throw re;
                     } else {
                         re.setStatus(Constants.RE_VERTEX_WRONG_SRV);
-                        throw re;
                     }
+                    //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
+                    throw re;
+
                 }
+                //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
                 return 0;
             }
 
@@ -94,7 +98,7 @@ public class IOGPHandler extends BaseHandler {
                     inst.localstore.put(newKey.toKey(), bval);
                     inst.size.getAndIncrement();
 
-                    inst.edgecounters.putIfAbsent(dst, new Counters(Constants.REASSIGN_THRESHOLD));
+                    inst.edgecounters.putIfAbsent(dst, new Counters());
 
                     if (inst.loc.containsKey(dst) && inst.loc.get(dst) == inst.getLocalIdx()) {
                         inst.edgecounters.get(src).alo += 1;
@@ -117,18 +121,20 @@ public class IOGPHandler extends BaseHandler {
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
+                        //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
                         return 0;
                     }
 
-                    if (c.edges > c.last_reassign_threshold) {
+                    if (c.edges > (Math.pow(2, c.reassign_times) * Constants.REASSIGN_THRESHOLD)) {
                         // Need to reassign again
                         GLogger.info("[%d] %s needs reassign", inst.getLocalIdx(), new String(bsrc));
-                        c.last_reassign_threshold = 2 * c.last_reassign_threshold;
+                        c.reassign_times += 1;
                         try {
                             inst.reassigner.reassignVertex(src);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
+                        //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
                         return 0;
                     }
 
@@ -141,11 +147,11 @@ public class IOGPHandler extends BaseHandler {
                     if (inst.getEdgeLoc(bsrc, inst.serverNum) == inst.getLocalIdx()){
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(src));
-                        throw re;
                     } else {
                         re.setStatus(Constants.RE_VERTEX_WRONG_SRV);
-                        throw re;
                     }
+                    //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
+                    throw re;
                 }
 
             } else { //if src has been split
@@ -164,17 +170,18 @@ public class IOGPHandler extends BaseHandler {
                     if (inst.getEdgeLoc(bdst, inst.serverNum) == inst.getLocalIdx()){
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(dst));
-                        throw re;
                     } else {
                         re.setStatus(Constants.EDGE_SPLIT_WRONG_SRV);
-                        throw re;
                     }
+
+                    //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
+                    throw re;
 
                 }
 
             }
         }
-
+        //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
         return 0;
     }
 
@@ -187,7 +194,7 @@ public class IOGPHandler extends BaseHandler {
 
         DBKey newKey = new DBKey(bsrc, bdst, type);
 
-        inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
+        inst.edgecounters.putIfAbsent(src, new Counters());
         Counters c = inst.edgecounters.get(src);
 
         synchronized (c) {
@@ -291,6 +298,8 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public synchronized List<KeyValue> scan(ByteBuffer src, int type) throws TException {
+        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "scan");
+
         byte[] bsrc = NIOHelper.getActiveArray(src);
         
         List<KeyValue> rtn = new ArrayList<KeyValue>();
@@ -303,11 +312,15 @@ public class IOGPHandler extends BaseHandler {
         for (KeyValue kv : kvs)
             rtn.add(kv);
 
+        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "scan");
+
+
         return rtn;
     }
 
     @Override
     public int batch_insert(List<KeyValue> batches, int type) throws TException {
+        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "batch_insert");
         if (type == 0) { //Split phase uses this
             RedirectException re = new RedirectException();
             List<Movement> mvs = new ArrayList<>();
@@ -330,8 +343,10 @@ public class IOGPHandler extends BaseHandler {
             }
             if (!mvs.isEmpty()) {
                 re.setRe(mvs);
+                GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
                 throw re;
             }
+            GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
             return 0;
         }
         if (type == 1){  //Vertex Reassign uses this
@@ -341,8 +356,7 @@ public class IOGPHandler extends BaseHandler {
 
                 DBKey key = new DBKey(kv.getKey());
                 ByteBuffer bdst = ByteBuffer.wrap(key.dst);
-                if (!inst.edgecounters.containsKey(bdst))
-                    inst.edgecounters.put(bdst, new Counters(Constants.REASSIGN_THRESHOLD));
+                inst.edgecounters.putIfAbsent(bdst, new Counters());
                 Counters dstc = inst.edgecounters.get(bdst);
 
                 if (inst.loc.containsKey(bdst)
@@ -354,38 +368,45 @@ public class IOGPHandler extends BaseHandler {
                 }
             }
         }
+        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
         return 0;
     }
 
     @Override
     public int split(ByteBuffer src) throws TException{
+        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "split");
         inst.edgecounters.remove(src);
         inst.split.put(src, 1);
+        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "split");
         return 0;
     }
 
     @Override
     public int reassign(ByteBuffer src, int type, int target) throws RedirectException, TException {
+        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "reassign");
         if (type == 0){ //update hash-loc
             inst.loc.put(src, target);
-        }
-        if (type == 1){
-            inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
+        } else {
+            // when type > 0, it is actually showing how many times the vertex has been reassigned.
+            inst.edgecounters.putIfAbsent(src, new Counters());
             Counters c = inst.edgecounters.get(src);
             c.alo = c.plo;
             c.ali = c.pli;
+            c.reassign_times = type;
             inst.loc.put(src, target);
         }
+        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "reassign");
+
         return 0;
     }
 
     @Override
     public int fennel(ByteBuffer src) throws RedirectException {
-        //GLogger.info("Server [%d] is serving RPC Call fennel", inst.getLocalIdx());
-        inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
+        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "fennel");
+        inst.edgecounters.putIfAbsent(src, new Counters());
         Counters c = inst.edgecounters.get(src);
         int score = 2 * (c.pli + c.plo) - inst.size.get();
-        //GLogger.info("Server [%d] finish serving RPC Call fennel", inst.getLocalIdx());
+        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "fennel");
         return score;
     }
 

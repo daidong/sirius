@@ -34,6 +34,9 @@ public class IOGPGraphReassigner {
 			AtomicInteger broadcast = broadcasts.get(src);
 			final Condition broadcast_finish = broadcast_finishes.get(src);
 
+			//GLogger.info("[%d] In Fennel Callback broadcast for %s, broadcast: %d",
+			//		inst.getLocalIdx(), new String(NIOHelper.getActiveArray(src)), broadcast.get());
+
 			lock.lock();
 			try {
 				fennel_score[finished] = t.getResult();
@@ -113,7 +116,7 @@ public class IOGPGraphReassigner {
 		/**
 		 * Second Step: Choose the best one and decide whether move the vertices or not
 		 */
-		inst.edgecounters.putIfAbsent(src, new Counters(Constants.REASSIGN_THRESHOLD));
+		inst.edgecounters.putIfAbsent(src, new Counters());
 		Counters c = inst.edgecounters.get(src);
 
 		boolean reassign_decision = false;
@@ -131,26 +134,34 @@ public class IOGPGraphReassigner {
 			if (max_score - local_score > 10)
 				reassign_decision = true;
 
-		GLogger.info("vertex %s should move from %d to %d",
-				new String(bsrc), inst.getLocalIdx(), target);
-
 		/**
 		 * Third Step: Medata Update
 		 */
 		if (reassign_decision != true) return;
+		GLogger.info("[%d] %s should move from %d to %d for %d times",
+				inst.getLocalIdx(), new String(bsrc),
+				inst.getLocalIdx(), target, c.reassign_times);
 
 		try {
 			/**
 			 * The order is important. First setup target, then update the hash sorce
 			 */
 			int hash_loc = inst.getEdgeLoc(bsrc, inst.serverNum);
-			inst.getClientConn(target).reassign(src, 1, target);
+			// to the target server, "type" is how many this vertex has been reassigned.
+			if (c.reassign_times < 1) GLogger.error("c.reassign_times should never small than 1");
 
-			if (hash_loc != inst.getLocalIdx())
-				inst.getClientConn(hash_loc).reassign(src, 0, target);
-			else
-				inst.handler.reassign(src, 0, target);
+			TGraphFSServer.Client targetClient = inst.getClientConn(target);
+			synchronized (targetClient) {
+				targetClient.reassign(src, c.reassign_times, target);
+			}
 
+			TGraphFSServer.Client hashClient = inst.getClientConn(hash_loc);
+			synchronized (hashClient) {
+				if (hash_loc != inst.getLocalIdx())
+					hashClient.reassign(src, 0, target);
+				else
+					inst.handler.reassign(src, 0, target);
+			}
 		} catch (TException e) {
 			e.printStackTrace();
 		}
@@ -168,7 +179,7 @@ public class IOGPGraphReassigner {
 			DBKey key = new DBKey(kv.getKey());
 			ByteBuffer bdst = ByteBuffer.wrap(key.dst);
 			if (!inst.edgecounters.containsKey(bdst))
-				inst.edgecounters.put(bdst, new Counters(Constants.REASSIGN_THRESHOLD));
+				inst.edgecounters.put(bdst, new Counters());
 			Counters dstc = inst.edgecounters.get(bdst);
 
 			if (inst.loc.containsKey(bdst)
@@ -184,7 +195,13 @@ public class IOGPGraphReassigner {
 		 * Fourth Step: Conduct data movement
 		 */
 		try {
-			inst.getClientConn(target).batch_insert(kvs, 1);
+			TGraphFSServer.Client client = inst.getClientConn(target);
+			synchronized (client) {
+				//GLogger.info("[%d]-[Reassign]-[%d] Client: %s calls batch_insert",
+				//		inst.getLocalIdx(), target, client.toString());
+				client.batch_insert(kvs, 1);
+			}
+
 		} catch (TException e) {
 			e.printStackTrace();
 		}

@@ -130,17 +130,15 @@ public class IOGPGraphSplitMover{
 			loadsOnEachServer.get(hash_target).add(kv);
 		}
 		for (int target : loadsOnEachServer.keySet()){
-			if (target != inst.getLocalIdx()) {
-				Task t = new Task(loadsOnEachServer.get(target));
-				taskQueues[target].put(t);
-			}
+			addDataMovementTask(target, loadsOnEachServer.get(target));
 		}
-
 	}
 
 	public void addDataMovementTask(int i, ArrayList<KeyValue> kv) throws InterruptedException {
-		Task t = new Task(kv);
-		this.taskQueues[i].put(t);
+		if (i != inst.getLocalIdx()) {
+			Task t = new Task(kv);
+			this.taskQueues[i].put(t);
+		}
 	}
 
 	class Worker implements Runnable{
@@ -149,8 +147,8 @@ public class IOGPGraphSplitMover{
 		IOGPSrv inst;
 
 		public Worker(int t, LinkedBlockingQueue<Task> q, IOGPSrv inst){
-			target = t;
-			tasks = q;
+			this.target = t;
+			this.tasks = q;
 			this.inst = inst;
 		}
 		@Override
@@ -162,12 +160,15 @@ public class IOGPGraphSplitMover{
 
 					if (task.type == 1) { //move data
 						ArrayList<KeyValue> kvs = (ArrayList<KeyValue>) task.payload;
-
 						if (kvs != null) {
-
 							try {
-								inst.getClientConn(target).batch_insert(kvs, 0);
-							} catch (RedirectException e) {
+								TGraphFSServer.Client client = inst.getClientConn(this.target);
+								synchronized (client){
+								//	GLogger.info("[%d]-[Split]-[%d] Client: %s calls batch_insert",
+								//			inst.getLocalIdx(), target, client.toString());
+									client.batch_insert(kvs, 0);
+								}
+ 							} catch (RedirectException e) {
 
 								int status = e.getStatus();
 								for (Movement m : e.getRe()) {
