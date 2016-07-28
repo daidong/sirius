@@ -2,15 +2,13 @@
 
 # This script should run in head node
 
-serverNumber = $1
-
 # Setup Head Node
 cp /proj/cloudincr-PG0/tools/installers/id_rsa ~/.ssh/
 cp /proj/cloudincr-PG0/tools/installers/id_dsa ~/.ssh/
 ssh-agent bash
 ssh-add
 
-bound=`expr $serverNumber - 1`
+bound=`expr $1 - 1`
 
 # Touch Every Server
 for i in $(seq 0 $bound)
