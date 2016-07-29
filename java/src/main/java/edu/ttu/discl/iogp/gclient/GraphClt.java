@@ -47,7 +47,8 @@ public abstract class GraphClt {
             this.port = Integer.parseInt(addrPort.split(":")[1]);
 
             //TTransport transport = new TSocket(addr, port);
-            TTransport transport = new TFramedTransport(new TSocket(addr, this.port));
+            TTransport transport = new TFramedTransport(new TSocket(addr, this.port),
+                    1024 * 1024 * 1024);
             try {
                 transport.open();
             } catch (TTransportException e) {
@@ -57,6 +58,7 @@ public abstract class GraphClt {
             TProtocol protocol = new TBinaryProtocol(transport);
             TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
             conns[i] = client;
+
             try {
                 asyncClients[i] = new TGraphFSServer.AsyncClient(new TBinaryProtocol.Factory(),
 						new TAsyncClientManager(),

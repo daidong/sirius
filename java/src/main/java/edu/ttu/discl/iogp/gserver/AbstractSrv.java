@@ -122,7 +122,7 @@ public abstract class AbstractSrv {
         String addrPort = this.getAllSrvs().get(target);
         String taddr = addrPort.split(":")[0];
         int tport = Integer.parseInt(addrPort.split(":")[1]);
-        TTransport transport = new TFramedTransport(new TSocket(taddr, tport));
+        TTransport transport = new TFramedTransport(new TSocket(taddr, tport), 1024 * 1024 * 1024);
         //TTransport transport = new TSocket(taddr, tport);
         transport.open();
         TProtocol protocol = new TBinaryProtocol(transport);
@@ -178,7 +178,7 @@ public abstract class AbstractSrv {
         String addrPort = this.getAllSrvs().get(target);
         String taddr = addrPort.split(":")[0];
         int tport = Integer.parseInt(addrPort.split(":")[1]);
-        TTransport transport = new TFramedTransport(new TSocket(taddr, tport));
+        TTransport transport = new TFramedTransport(new TSocket(taddr, tport), 1024 * 1024 * 1024);
         //TTransport transport = new TSocket(taddr, tport);
         transport.open();
         TProtocol protocol = new TBinaryProtocol(transport);

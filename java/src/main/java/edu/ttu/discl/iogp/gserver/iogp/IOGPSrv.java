@@ -54,7 +54,7 @@ public class IOGPSrv extends AbstractSrv {
             TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(this.port);
             TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);
             tArgs.processor(processor);
-            tArgs.transportFactory(new TFramedTransport.Factory());
+            tArgs.transportFactory(new TFramedTransport.Factory(1024 * 1024 * 1024));
             tArgs.protocolFactory(new TBinaryProtocol.Factory());
             TServer server = new TThreadedSelectorServer(tArgs);
             
