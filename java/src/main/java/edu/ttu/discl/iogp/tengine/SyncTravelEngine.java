@@ -192,7 +192,7 @@ public class SyncTravelEngine {
                 + ((long) (instance.getLocalIdx() + 1) * (1L << 32));
         startSyncTravelTime(travelId);
         this.locks.put(travelId, new Object());
-        GLogger.debug("R TM %d %d %d", instance.getLocalIdx(), -1, System.nanoTime());
+        GLogger.info("R TM %d %d %d", instance.getLocalIdx(), -1, System.nanoTime());
 
         ArrayList<SingleStep> travelPlan = deSerializeTravelPlan(tc.getPayload());
         setSyncTravelPlan(travelId, travelPlan);
@@ -202,7 +202,7 @@ public class SyncTravelEngine {
         replyTo = instance.getLocalIdx();
 
         List<byte[]> keySet = firstStep.vertexKeyRestrict.values();
-        GLogger.debug("[%d Coordinator] Receives Travel %d on %s at %d",
+        GLogger.info("[%d Coordinator] Receives Travel %d on %s at %d",
                 instance.getLocalIdx(), travelId,
                 new String(keySet.get(0)),
                 getStartSyncTravelTime(travelId));
@@ -216,7 +216,7 @@ public class SyncTravelEngine {
         //register the execution
         //we are extending vertices
         addToSyncServers(travelId, stepId, replyTo, perServerVertices.keySet(), 0);
-        GLogger.debug("Server[%d] stepId[%d] extend %d -> %s",
+        GLogger.info("Server[%d] stepId[%d] extend %d -> %s",
                 instance.getLocalIdx(), stepId, replyTo, perServerVertices.keySet());
 
         // broadcast vertices to servers;
@@ -243,7 +243,7 @@ public class SyncTravelEngine {
                     .setPayload(travelPayLoad)
                     .setSub_type(0);
 
-            GLogger.debug("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
+            GLogger.info("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
             if (s != instance.getLocalIdx()) {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(s);
                 client.syncTravel(tc1);
@@ -266,7 +266,7 @@ public class SyncTravelEngine {
                 .setReply_to(replyTo).setGet_from(instance.getLocalIdx()).setTs(ts);
 
         for (int s : perServerVertices.keySet()) {
-            GLogger.debug("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
+            GLogger.info("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
             if (s != instance.getLocalIdx()) {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(s);
                 client.syncTravelStart(tc1);
@@ -299,10 +299,10 @@ public class SyncTravelEngine {
         int replyTo = tc.getReply_to();
         int getFrom = tc.getGet_from();
         long ts = tc.getTs();
-        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Enter",
+        GLogger.info("[%d] [travel] [%s] [Step] [%d] Enter",
                 instance.getLocalIdx(), id.toString(), stepId);
 
-        GLogger.debug("R TV %d %d %d %d", instance.getLocalIdx(), getFrom, System.nanoTime(), subType);
+        GLogger.info("R TV %d %d %d %d", instance.getLocalIdx(), getFrom, System.nanoTime(), subType);
         String payloadString = tc.getPayload();
         ArrayList<SingleStep> travelPlan = deSerializeTravelPlan(payloadString);
         setSyncTravelPlan(travelId, travelPlan);
@@ -332,7 +332,7 @@ public class SyncTravelEngine {
                     )
             );
         }
-        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Finish",
+        GLogger.info("[%d] [travel] [%s] [Step] [%d] Finish",
                 instance.getLocalIdx(), id.toString(), stepId);
         return 0;
     }
@@ -352,7 +352,7 @@ public class SyncTravelEngine {
                 )
         );
 
-        GLogger.debug("R TS %d %d %d", instance.getLocalIdx(), tc.getGet_from(), System.nanoTime());
+        GLogger.info("R TS %d %d %d", instance.getLocalIdx(), tc.getGet_from(), System.nanoTime());
         return 0;
     }
 
@@ -368,7 +368,7 @@ public class SyncTravelEngine {
         int srcServer = tc.getGet_from();
         int dstServer = tc.getLocal_id();
 
-        GLogger.debug("R TR %d %d %d", instance.getLocalIdx(), dstServer, System.nanoTime());
+        GLogger.info("R TR %d %d %d", instance.getLocalIdx(), dstServer, System.nanoTime());
 
         for (int i = 0; i < instance.serverNum; i++){
                 removeFromSyncServers(travelId, stepId, i, dstServer, 0);
