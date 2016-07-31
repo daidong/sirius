@@ -72,8 +72,8 @@ public class SyncTravelEdgeWorker implements Runnable {
                 this.instance.localstore,
                 engine.pool, passedVertices, currStep, ts);
 
-        GLogger.info("Server [%d] Finish Read Local Edges for %d at %d",
-                instance.getLocalIdx(), stepId, System.nanoTime());
+        GLogger.info("Server [%d] Finish Read %d Local Edges for step %d at %d",
+                instance.getLocalIdx(), nextVertices.size(), stepId, System.nanoTime());
 
         for (byte[] v : nextVertices) {
             Set<Integer> servers = instance.getVertexLoc(v);
@@ -100,16 +100,17 @@ public class SyncTravelEdgeWorker implements Runnable {
         // report to coordinator, round 'stepId + 1' should have these many servers, and they are:
         List<Integer> addrs = new ArrayList<Integer>(perServerVertices.keySet());
         TravelCommand tc1 = new TravelCommand();
-        tc1.setTravelId(travelId).setStepId(stepId + 1).setType(TravelCommandType.SYNC_TRAVEL_EXTEND)
-                .setGet_from(instance.getLocalIdx()).setExt_srv(addrs)
+        tc1.setTravelId(travelId)
+                .setStepId(stepId + 1)
+                .setType(TravelCommandType.SYNC_TRAVEL_EXTEND)
+                .setGet_from(instance.getLocalIdx())
+                .setExt_srv(addrs)
                 .setLocal_id(instance.getLocalIdx())
-                .setSub_type(0); //subtype==0 means we are extending vertices;
-        //GLogger.warn("[%d] SyncTravelEdgeWorker stepId[%d] GetFrom: %d, Extend %d to %s (%d)",
-        //        inst.getLocalIdx(), (stepId + 1), getFrom, inst.getLocalIdx(), addrs, 0);
+                .setSub_type(0);
 
         try {
             TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-            GLogger.debug("%d Send TravelExtend to %d at %d",
+            GLogger.info("%d Send TravelExtend to %d at %d",
                     instance.getLocalIdx(), replyTo, System.nanoTime());
 
             client.syncTravelExtend(tc1);
@@ -138,7 +139,8 @@ public class SyncTravelEdgeWorker implements Runnable {
                 nextKeys.add(tbb);
             }
 
-            travelPlan.get(stepId + 1).vertexKeyRestrict = new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
+            travelPlan.get(stepId + 1).vertexKeyRestrict
+                    = new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
             String travelPayLoad = engine.serializeTravelPlan(travelPlan);
 
             TravelCommand tc2 = new TravelCommand();
@@ -149,7 +151,7 @@ public class SyncTravelEdgeWorker implements Runnable {
                     .setSub_type(0);
 
             try {
-                GLogger.info("%d Send Travel Comand to %d at %d for vertex",
+                GLogger.info("%d Send Travel Command to %d at %d for vertex",
                         instance.getLocalIdx(), s, System.nanoTime());
 
                 if (s == instance.getLocalIdx()) {

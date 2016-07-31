@@ -311,11 +311,11 @@ public class SyncTravelEngine {
         int replyTo = tc.getReply_to();
         int getFrom = tc.getGet_from();
         long ts = tc.getTs();
-        GLogger.info("[%d] [travel] [%s] [Step] [%d] Enter",
+        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Enter",
                 instance.getLocalIdx(), id.toString(), stepId);
 
         GLogger.info("%d Receive Travel Command Type: %d from %d At %d",
-                instance.getLocalIdx(), getFrom, subType, System.nanoTime());
+                instance.getLocalIdx(), subType, getFrom, System.nanoTime());
 
         String payloadString = tc.getPayload();
         ArrayList<SingleStep> travelPlan = deSerializeTravelPlan(payloadString);
@@ -347,7 +347,7 @@ public class SyncTravelEngine {
             );
         }
 
-        GLogger.info("[%d] [travel] [%s] [Step] [%d] Finish",
+        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Finish",
                 instance.getLocalIdx(), id.toString(), stepId);
         return 0;
     }
@@ -509,7 +509,8 @@ public class SyncTravelEngine {
             long costTime = System.currentTimeMillis() - getStartSyncTravelTime(travelId);
 
             if (isSyncServerEmpty(travelId, stepId)) {
-                GLogger.warn("Step %d Finishes at %d", stepId, costTime);
+                GLogger.warn("[%d] TravelFinish Step %d Finishes at %d",
+                        instance.getLocalIdx(), stepId, costTime);
 
                 /**
                  * Async Start

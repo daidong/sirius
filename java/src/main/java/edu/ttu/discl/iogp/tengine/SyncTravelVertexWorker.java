@@ -58,8 +58,8 @@ public class SyncTravelVertexWorker implements Runnable {
         */
         ArrayList<byte[]> passedVertices = TravelLocalReaderWithCache.filterVertices(this.instance.localstore, engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
 
-        GLogger.info("Server %d Finish Read Local Vertices for %d at %d",
-                instance.getLocalIdx(), stepId, System.nanoTime());
+        GLogger.info("Server %d Finish Read %d Local Vertices for %d at %d",
+                instance.getLocalIdx(), passedVertices.size(), stepId, System.nanoTime());
 
         if (lastStep) {
             TravelCommand tc = new TravelCommand();
@@ -92,8 +92,6 @@ public class SyncTravelVertexWorker implements Runnable {
 
         } else {
 
-            // Already verify the vertices;
-            // We need to verify the edges before generating next-step vertices
             HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = new HashMap<>();
             for (byte[] key : passedVertices) {
                 Set<Integer> servers = instance.getEdgeLocs(key, EdgeType.OUT.get());
@@ -114,15 +112,12 @@ public class SyncTravelVertexWorker implements Runnable {
                     .setStepId(stepId).setType(TravelCommandType.SYNC_TRAVEL_EXTEND)
                     .setGet_from(instance.getLocalIdx()).setExt_srv(addrs)
                     .setLocal_id(instance.getLocalIdx())
-                    .setSub_type(1);  //subtype==1 means we are extending to access edges
-            //GLogger.warn("[%d] SyncTravelVertexWorker stepId[%d] Extend %d to %s (%d)",
-            //        inst.getLocalIdx(), stepId,
-            //        inst.getLocalIdx(), addrs, 1);
+                    .setSub_type(1);
 
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.info("%d Send TraveExtend to %d at %d including %s",
-                        instance.getLocalIdx(), replyTo, System.nanoTime(), addrs);
+                GLogger.info("%d Send TraveExtend to %d including %s at %d",
+                        instance.getLocalIdx(), replyTo, addrs, System.nanoTime());
 
                 client.syncTravelExtend(tc_ext);
                 /*
@@ -150,13 +145,18 @@ public class SyncTravelVertexWorker implements Runnable {
                 String travelPayLoad = engine.serializeTravelPlan(travelPlan);
 
                 TravelCommand tc1 = new TravelCommand();
-                tc1.setType(TravelCommandType.SYNC_TRAVEL).setTravelId(travelId)
-                        .setStepId(stepId).setReply_to(replyTo).setTs(ts).setPayload(travelPayLoad)
-                        .setGet_from(instance.getLocalIdx()).setLocal_id(s)
+                tc1.setType(TravelCommandType.SYNC_TRAVEL)
+                        .setTravelId(travelId)
+                        .setStepId(stepId)
+                        .setReply_to(replyTo)
+                        .setTs(ts)
+                        .setPayload(travelPayLoad)
+                        .setGet_from(instance.getLocalIdx())
+                        .setLocal_id(s)
                         .setSub_type(1);
 
                 try {
-                    GLogger.info("%d Send Travel Command to %d at %d for the edges",
+                    GLogger.info("%d Send Travel Command to %d for the edges at %d",
                             instance.getLocalIdx(), s, System.nanoTime());
 
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
