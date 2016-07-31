@@ -6,6 +6,7 @@ import edu.ttu.discl.iogp.tengine.SyncTravelEngine;
 import edu.ttu.discl.iogp.thrift.Dist;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.RedirectException;
+import edu.ttu.discl.iogp.thrift.Status;
 import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
@@ -88,6 +89,11 @@ public class EdgeCutHandler extends BaseHandler {
 
     @Override
     public int fennel(ByteBuffer src) throws RedirectException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public int syncstatus(List<Status> statuses) throws RedirectException, RedirectException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

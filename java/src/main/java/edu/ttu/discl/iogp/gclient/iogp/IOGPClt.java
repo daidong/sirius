@@ -1,21 +1,17 @@
 package edu.ttu.discl.iogp.gclient.iogp;
 
-import com.jcabi.immutable.Array;
-import edu.ttu.discl.iogp.gclient.Batch;
 import edu.ttu.discl.iogp.gclient.GraphClt;
 import edu.ttu.discl.iogp.gserver.EdgeType;
-import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.tengine.travel.GTravel;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.RedirectException;
+import edu.ttu.discl.iogp.thrift.Status;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
 import edu.ttu.discl.iogp.utils.ArrayPrimitives;
 import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -29,23 +25,29 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class IOGPClt extends GraphClt {
 
-    private static final Logger logger = LoggerFactory.getLogger(IOGPClt.class);
-
     HashMap<ByteBuffer, Integer> cachedLocationInfo = new HashMap<>();
+    HashMap<ByteBuffer, Integer> cachedSplitInfo = new HashMap<>();
 
     public IOGPClt(int port, ArrayList<String> alls) {
         super(port, alls);
+    }
+
+    private int getSplitInfoFromCache(byte[] src){
+        if (cachedSplitInfo.containsKey(ByteBuffer.wrap(src)))
+            return cachedSplitInfo.get(ByteBuffer.wrap(src));
+        else return 0;
     }
 
     private int getLocationFromCache(byte[] src){
         if (cachedLocationInfo.containsKey(ByteBuffer.wrap(src)))
             return cachedLocationInfo.get(ByteBuffer.wrap(src));
         else
-            return getEdgeLocation(src, this.serverNum);
+            return getHashLocation(src, this.serverNum);
     }
     private void updateLocationToCache(byte[] src, int target){
         cachedLocationInfo.put(ByteBuffer.wrap(src), target);
     }
+
     private void invaidLocationCache(byte[] src){
         cachedLocationInfo.remove(ByteBuffer.wrap(src));
     }
@@ -73,12 +75,12 @@ public class IOGPClt extends GraphClt {
                 if (status == Constants.RE_ACTUAL_LOC)
                     target = re.getTarget();
                 else if (status == Constants.RE_VERTEX_WRONG_SRV)
-                    target = getEdgeLocation(srcVertex, this.serverNum);
+                    target = getHashLocation(srcVertex, this.serverNum);
                 else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == false) {
                     split = true;
                     target = getLocationFromCache(dstKey);
                 } else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true)
-                    target = getEdgeLocation(dstKey, this.serverNum);
+                    target = getHashLocation(dstKey, this.serverNum);
             }
             if (retry++ > Constants.RETRY)
                 break;
@@ -111,18 +113,92 @@ public class IOGPClt extends GraphClt {
                 if (status == Constants.RE_ACTUAL_LOC)
                     target = re.getTarget();
                 else if (status == Constants.RE_VERTEX_WRONG_SRV)
-                    target = getEdgeLocation(srcVertex, this.serverNum);
+                    target = getHashLocation(srcVertex, this.serverNum);
                 else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == false) {
                     split = true;
+                    cachedSplitInfo.put(ByteBuffer.wrap(srcVertex), 1);
                     target = getLocationFromCache(dstKey);
-                } else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true)
-                    target = getEdgeLocation(dstKey, this.serverNum);
+                } else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true) {
+                    target = getHashLocation(dstKey, this.serverNum);
+                    cachedSplitInfo.put(ByteBuffer.wrap(srcVertex), 1);
+                }
             }
             if (retry++ > Constants.RETRY)
                 break;
         }
         updateLocationToCache(srcVertex, target);
         return Constants.RTN_SUCC;
+    }
+
+    public int syncstatus() throws TException{
+
+        ArrayList<Status> statuses = new ArrayList<>();
+        HashSet<ByteBuffer> touchedVertices = new HashSet<>();
+        touchedVertices.addAll(cachedLocationInfo.keySet());
+        touchedVertices.addAll(cachedSplitInfo.keySet());
+
+        for (ByteBuffer v : touchedVertices){
+            Status s = new Status();
+            s.setKey(NIOHelper.getActiveArray(v));
+            s.setLocation(getLocationFromCache(NIOHelper.getActiveArray(v)));
+            s.setIssplit(getSplitInfoFromCache(NIOHelper.getActiveArray(v)));
+            statuses.add(s);
+        }
+
+        final Lock lock = new ReentrantLock();
+        AtomicInteger total_broadcast = new AtomicInteger(serverNum);
+        final Condition broadcast_finish = lock.newCondition();
+
+        try {
+            for (int i = 0; i < serverNum; i++) {
+                TGraphFSServer.AsyncClient aclient = getAsyncClientConn(i);
+                aclient.syncstatus(statuses,
+                        new SyncAllCallback(lock, broadcast_finish, total_broadcast));
+            }
+
+            lock.lock();
+            try {
+                broadcast_finish.await();
+            } finally {
+                lock.unlock();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
+    class SyncAllCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncstatus_call> {
+
+        public Lock lock;
+        public AtomicInteger total_broadcast;
+        public Condition broadcast_finish;
+
+        public SyncAllCallback(Lock l, Condition f, AtomicInteger total){
+            lock = l;
+            total_broadcast = total;
+            broadcast_finish = f;
+        }
+        @Override
+        public void onComplete(TGraphFSServer.AsyncClient.syncstatus_call t) {
+            lock.lock();
+            try {
+                if (total_broadcast.decrementAndGet() == 0)
+                    broadcast_finish.signal();
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        @Override
+        public void onError(Exception e) {}
+    }
+
+    public List<ByteBuffer> bfs(byte[] srcVertex, EdgeType edgeType, int max_steps) throws TException
+    {
+        HashSet<ByteBuffer> visited = new HashSet<>();
+        return new ArrayList<>(visited);
     }
 
     public List<KeyValue> scan(byte[] srcVertex,
@@ -145,7 +221,7 @@ public class IOGPClt extends GraphClt {
                 if (status == Constants.RE_ACTUAL_LOC)
                     target = re.getTarget();
                 else if (status == Constants.RE_VERTEX_WRONG_SRV)
-                    target = getEdgeLocation(srcVertex, this.serverNum);
+                    target = getHashLocation(srcVertex, this.serverNum);
                 else if (status == Constants.EDGE_SPLIT_WRONG_SRV)
                     split = true;
             }
@@ -222,6 +298,7 @@ public class IOGPClt extends GraphClt {
 
         }
     }
+
     public static void main(String[] args) throws TException, IOException {
         int port = Integer.parseInt(args[0]);
         int index = Integer.parseInt(args[1]);

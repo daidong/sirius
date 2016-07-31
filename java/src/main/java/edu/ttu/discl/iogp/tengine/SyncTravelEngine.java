@@ -38,24 +38,6 @@ public class SyncTravelEngine {
         this.pool = new PreLoadMemoryPool();
     }
 
-    private SingleStep buildSingleStep(String payloadString, int stepId) {
-        JSONCommand js = new JSONCommand();
-        Map request = js.parse(payloadString);
-        JSONArray payload = (JSONArray) request.get("travel_payload");
-        JSONObject idx = (JSONObject) payload.get(stepId);
-        JSONObject obj = (JSONObject) idx.get("value");
-        SingleStep currStep = SingleStep.parseJSON(obj.toString());
-        return currStep;
-    }
-
-    private Map buildTravelContent(String payloadString, int replyTo, long ts) {
-        JSONCommand js = new JSONCommand();
-        Map request = js.parse(payloadString);
-        request.put("reply_to", replyTo);
-        request.put("ts", ts);
-        return request;
-    }
-
     public boolean isStepStarted(long travelId, int stepId){
         if (!this.travel_status.containsKey(travelId)) {
             GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
@@ -78,20 +60,6 @@ public class SyncTravelEngine {
             return null;
         }
         return this.travel_status.get(travelId).getSyncTravelVertices(stepId);
-    }
-
-    // Sync Edges Operations
-    private void addToSyncTravelEdges(long travelId, int stepId, HashSet<ByteBuffer> sKeySet) {
-        this.travel_status.putIfAbsent(travelId, new SyncTravelStatus(travelId));
-        this.travel_status.get(travelId).addToSyncTravelEdges(stepId, sKeySet);
-    }
-
-    public HashSet<ByteBuffer> getSyncTravelEdges(long travelId, int stepId) {
-        if (!this.travel_status.containsKey(travelId)) {
-            GLogger.error("No SyncTravelStatus inst exists for travelId: %d", travelId);
-            return null;
-        }
-        return this.travel_status.get(travelId).getSyncTravelEdges(stepId);
     }
 
     // Sync Server Operations
@@ -224,7 +192,7 @@ public class SyncTravelEngine {
                 + ((long) (instance.getLocalIdx() + 1) * (1L << 32));
         startSyncTravelTime(travelId);
         this.locks.put(travelId, new Object());
-        GLogger.info("R TM %d %d %d", instance.getLocalIdx(), -1, System.nanoTime());
+        GLogger.debug("R TM %d %d %d", instance.getLocalIdx(), -1, System.nanoTime());
 
         ArrayList<SingleStep> travelPlan = deSerializeTravelPlan(tc.getPayload());
         setSyncTravelPlan(travelId, travelPlan);
@@ -246,11 +214,13 @@ public class SyncTravelEngine {
         HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = getVertexBroadcastServers(keySet);
 
         //register the execution
-        addToSyncServers(travelId, stepId, replyTo, perServerVertices.keySet(), 0); //we are extending vertices
-        GLogger.info("Server[%d] stepId[%d] extend %d -> %s",
+        //we are extending vertices
+        addToSyncServers(travelId, stepId, replyTo, perServerVertices.keySet(), 0);
+        GLogger.debug("Server[%d] stepId[%d] extend %d -> %s",
                 instance.getLocalIdx(), stepId, replyTo, perServerVertices.keySet());
 
-        // broadcast vertices to servers; these servers will cache current step and wait for the SYNC_TRAVEL_START command;        
+        // broadcast vertices to servers;
+        // these servers will cache current step and wait for the SYNC_TRAVEL_START command;
         for (int s : perServerVertices.keySet()) {
             List<byte[]> nextKeys = new ArrayList<byte[]>();
             for (ByteBuffer bb : perServerVertices.get(s)) {
@@ -258,17 +228,22 @@ public class SyncTravelEngine {
                 nextKeys.add(tbb);
             }
 
-            travelPlan.get(stepId).vertexKeyRestrict = new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
+            travelPlan.get(stepId).vertexKeyRestrict =
+                    new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
             String travelPayLoad = serializeTravelPlan(travelPlan);
 
             TravelCommand tc1 = new TravelCommand();
             tc1.setType(TravelCommandType.SYNC_TRAVEL)
-                    .setTravelId(travelId).setStepId(stepId)
-                    .setReply_to(replyTo).setGet_from(instance.getLocalIdx()).setLocal_id(instance.getLocalIdx())
-                    .setTs(ts).setPayload(travelPayLoad)
+                    .setTravelId(travelId)
+                    .setStepId(stepId)
+                    .setReply_to(replyTo)
+                    .setGet_from(instance.getLocalIdx())
+                    .setLocal_id(instance.getLocalIdx())
+                    .setTs(ts)
+                    .setPayload(travelPayLoad)
                     .setSub_type(0);
 
-            GLogger.info("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
+            GLogger.debug("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
             if (s != instance.getLocalIdx()) {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(s);
                 client.syncTravel(tc1);
@@ -291,7 +266,7 @@ public class SyncTravelEngine {
                 .setReply_to(replyTo).setGet_from(instance.getLocalIdx()).setTs(ts);
 
         for (int s : perServerVertices.keySet()) {
-            GLogger.info("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
+            GLogger.debug("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
             if (s != instance.getLocalIdx()) {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(s);
                 client.syncTravelStart(tc1);
@@ -324,9 +299,10 @@ public class SyncTravelEngine {
         int replyTo = tc.getReply_to();
         int getFrom = tc.getGet_from();
         long ts = tc.getTs();
-        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Enter", instance.getLocalIdx(), id.toString(), stepId);
+        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Enter",
+                instance.getLocalIdx(), id.toString(), stepId);
 
-        GLogger.info("R TV %d %d %d %d", instance.getLocalIdx(), getFrom, System.nanoTime(), subType);
+        GLogger.debug("R TV %d %d %d %d", instance.getLocalIdx(), getFrom, System.nanoTime(), subType);
         String payloadString = tc.getPayload();
         ArrayList<SingleStep> travelPlan = deSerializeTravelPlan(payloadString);
         setSyncTravelPlan(travelId, travelPlan);
@@ -337,26 +313,46 @@ public class SyncTravelEngine {
             kSets.add(ByteBuffer.wrap(key));
         }
 
-        // There are two types of SYNC_TRAVEL commands. One for vertex processing; one for edge processing;
+        // There are two types of SYNC_TRAVEL commands.
+        // One for vertex processing; one for edge processing;
         if (subType == 0) {
             this.travel_status.get(travelId).addToSyncTravelVertices(stepId, kSets);
 
         } else {
             instance.workerPool.execute(
-                    new SyncTravelEdgeWorker(instance, this,
-                            travelId, stepId,
-                            getFrom, replyTo,
-                            ts, kSets));
+                    new SyncTravelEdgeWorker(
+                            instance,
+                            this,
+                            travelId,
+                            stepId,
+                            getFrom,
+                            replyTo,
+                            ts,
+                            kSets
+                    )
+            );
         }
-        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Finish", instance.getLocalIdx(), id.toString(), stepId);
+        GLogger.debug("[%d] [travel] [%s] [Step] [%d] Finish",
+                instance.getLocalIdx(), id.toString(), stepId);
         return 0;
     }
 
     public synchronized int syncTravelStart(TravelCommand tc) throws TException {
         setStepStarted(tc.getTravelId(), tc.getStepId());
-        instance.workerPool.execute(new SyncTravelVertexWorker(instance, this, tc.getTravelId(), tc.getStepId(),
-                tc.getReply_to(), tc.getGet_from(), tc.getTs()));
-        GLogger.info("R TS %d %d %d", instance.getLocalIdx(), tc.getGet_from(), System.nanoTime());
+
+        instance.workerPool.execute(
+                new SyncTravelVertexWorker(
+                        instance,
+                        this,
+                        tc.getTravelId(),
+                        tc.getStepId(),
+                        tc.getReply_to(),
+                        tc.getGet_from(),
+                        tc.getTs()
+                )
+        );
+
+        GLogger.debug("R TS %d %d %d", instance.getLocalIdx(), tc.getGet_from(), System.nanoTime());
         return 0;
     }
 
@@ -372,8 +368,7 @@ public class SyncTravelEngine {
         int srcServer = tc.getGet_from();
         int dstServer = tc.getLocal_id();
 
-        //GLogger.info("R TR %d %d %d", inst.getLocalIdx(), srcServer, System.nanoTime());
-        GLogger.info("R TR %d %d %d", instance.getLocalIdx(), dstServer, System.nanoTime());
+        GLogger.debug("R TR %d %d %d", instance.getLocalIdx(), dstServer, System.nanoTime());
 
         for (int i = 0; i < instance.serverNum; i++){
                 removeFromSyncServers(travelId, stepId, i, dstServer, 0);
@@ -388,12 +383,11 @@ public class SyncTravelEngine {
         }
 
         long costTime = System.currentTimeMillis() - getStartSyncTravelTime(travelId);
-        //GLogger.info("[%d] TravelId [%d] costs: %d from %d, Edge->Dst Local Counter[%d]",
-        //        inst.localIdx, travelId, costTime, dstServer, getEdge2DstLocalCounter(travelId));
+
 
         if (isSyncServerEmpty(travelId, stepId)) {
             GLogger.warn("Step %d Finishes at %d", stepId, costTime);
-            GLogger.info("[%d] TravelId[%d] Starting %s, costs: %d, Local Counter[%d]",
+            GLogger.debug("[%d] TravelId[%d] Starting %s, costs: %d, Local Counter[%d]",
                     instance.getLocalIdx(), travelId,
                     new String(this.tsrcs.get(travelId)),
                     costTime, getEdge2DstLocalCounter(travelId));
@@ -450,7 +444,7 @@ public class SyncTravelEngine {
         int subType = tc.getSub_type();
         int remote = tc.getLocal_id();
 
-        GLogger.info("R TE %d %d %d", instance.getLocalIdx(), remote, System.nanoTime());
+        GLogger.debug("R TE %d %d %d", instance.getLocalIdx(), remote, System.nanoTime());
         HashSet<Integer> srvs = new HashSet<Integer>(tc.getExt_srv());
         addToSyncServers(travelId, stepId, getFrom, srvs, subType);
         GLogger.debug("[%d] stepId[%d] Extends %d -> %s",
@@ -469,7 +463,7 @@ public class SyncTravelEngine {
         long ts = tc.getTs();
 
         //dst or local_id is the sender. Not src.
-        GLogger.info("R TF %d %d %d", instance.getLocalIdx(), dst, System.nanoTime());
+        GLogger.debug("R TF %d %d %d", instance.getLocalIdx(), dst, System.nanoTime());
 
         if (type == 0){
             //vertex worker finish. should not start next step.
@@ -504,11 +498,15 @@ public class SyncTravelEngine {
                 }
 
                 TravelCommand tc1 = new TravelCommand();
-                tc1.setType(TravelCommandType.SYNC_TRAVEL_START).setTravelId(travelId).setStepId(stepId + 1)
-                        .setReply_to(replyTo).setGet_from(instance.getLocalIdx()).setTs(ts);
+                tc1.setType(TravelCommandType.SYNC_TRAVEL_START)
+                        .setTravelId(travelId)
+                        .setStepId(stepId + 1)
+                        .setReply_to(replyTo)
+                        .setGet_from(instance.getLocalIdx())
+                        .setTs(ts);
 
                 for (int s : servers) {
-                    GLogger.info("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
+                    GLogger.debug("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
 
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
                     aclient.syncTravelStart(tc1, new SendTraverlStartCallback(s));
@@ -520,7 +518,6 @@ public class SyncTravelEngine {
                 }
                 */
                 }
-                //inst.workerPool.execute(new SendTravelStart(inst, this, travelId, stepId, replyTo, ts));
             }
         }
 
@@ -544,49 +541,5 @@ public class SyncTravelEngine {
             GLogger.error("SyncTravelEdgeWorker BroadCastTVCallback Error: %s", e);
         }
     }
-
-    /*
-    private class SendTravelStart implements Runnable {
-
-        AbstractSrv inst;
-        SyncTravelEngine engine;
-        long travelId, ts;
-        int stepId, replyTo;
-
-        public SendTravelStart(AbstractSrv inst, SyncTravelEngine e, long tid, int sid, int rto, long ts) {
-            this.inst = inst;
-            this.engine = e;
-            this.travelId = tid;
-            this.ts = ts;
-            this.stepId = sid;
-            this.replyTo = rto;
-        }
-
-        @Override
-        public void run() {
-            HashSet<SyncTravelStatus.SyncServerPair> addrs = getSyncServers(travelId, stepId + 1);
-            //because other threads may change this HashSet
-            ArrayList<SyncTravelStatus.SyncServerPair> addrNoConcurrents = new ArrayList<>(addrs);
-            TravelCommand tc1 = new TravelCommand();
-            tc1.setType(TravelCommandType.SYNC_TRAVEL_START).setTravelId(travelId).setStepId(stepId + 1)
-                    .setReply_to(replyTo).setGet_from(inst.getLocalIdx()).setTs(ts);
-            try {
-                for (SyncTravelStatus.SyncServerPair pair : addrNoConcurrents) {
-                    int s = pair.endTo;
-                    GLogger.info("S TS %d %d %d", inst.getLocalIdx(), s, System.nanoTime());
-                    if (s == inst.getLocalIdx()) {
-                        syncTravelStart(tc1);
-                    } else {
-                        Client client = inst.getClientConn(s);
-                        synchronized (client) {
-                            client.syncTravelStart(tc1);
-                        }
-                    }
-                }
-            } catch (TException e) {
-            }
-        }
-    }
-    */
 
 }

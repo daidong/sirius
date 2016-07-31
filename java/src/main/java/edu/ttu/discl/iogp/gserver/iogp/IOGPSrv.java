@@ -31,6 +31,25 @@ public class IOGPSrv extends AbstractSrv {
 
     AtomicInteger size = new AtomicInteger(0);
 
+    /**
+     * These two information must be always correct!
+     */
+    HashMap<ByteBuffer, Integer> syncedLocationInfo = new HashMap<>();
+    HashMap<ByteBuffer, Integer> syncedSplitInfo = new HashMap<>();
+
+	private int getLocationFromSyncedInfo(byte[] src){
+        if (syncedLocationInfo.containsKey(ByteBuffer.wrap(src)))
+            return syncedLocationInfo.get(ByteBuffer.wrap(src));
+        else
+            return getHashLoc(src, this.serverNum);
+    }
+    private int getSplitInfoFromSyncedInfo(byte[] src){
+        if (syncedSplitInfo.containsKey(ByteBuffer.wrap(src)))
+            return syncedSplitInfo.get(ByteBuffer.wrap(src));
+        else
+            return 0;
+    }
+
     public IOGPSrv() {
         super();
         this.handler = new IOGPHandler(this);
@@ -75,49 +94,23 @@ public class IOGPSrv extends AbstractSrv {
         Set<Integer> locs = new HashSet<>();
 
         //by default, split(v) == 0 and src location is where edges are stored
-        locs.add(getEdgeLoc(src, this.serverNum));
+        locs.add(getLocationFromSyncedInfo(src));
 
         /*
          * if split(v) == 1 and we are asking EdgeType.OUT
          */
-        if (split.containsKey(bbsrc) && split.get(bbsrc) == 1 && type == EdgeType.OUT.get())
-            for (int i = 0; i < this.serverNum; i++)
-                locs.add(i);
-
-        /*
-         * If split(v) == 2 and we are asking EdgeType.IN
-         */
-        if (split.containsKey(bbsrc) && split.get(bbsrc) == 2 && type == EdgeType.IN.get())
+        if (getSplitInfoFromSyncedInfo(src) == 1)
             for (int i = 0; i < this.serverNum; i++)
                 locs.add(i);
 
         return locs;
     }
 
-	/**
-     * @param src
-     * @return A set of interger, indicating vertex location. All current algorithms will return
-     * a set with only one element
-     *
-     * @TODO: Not working for unlocal vertices yet.
-     * IOGP makes this function tricky. During traversal, after visiting an edge, we need
-     * to find locations for all destination vertices. This might include visiting the original
-     * server asking for current location.
-     *
-     * Caching real location in this node needes retries mechanism in traversal engine.
-     */
+
     @Override
     public Set<Integer> getVertexLoc(byte[] src) {
-        ByteBuffer bbsrc = ByteBuffer.wrap(src);
         Set<Integer> locs = new HashSet<>();
-
-        int hashIdx = getEdgeLoc(src, this.serverNum);
-
-        if (loc.containsKey(bbsrc)) {
-            locs.add(loc.get(bbsrc));
-            return locs;
-        }
-
+        locs.add(getLocationFromSyncedInfo(src));
         return locs;
     }
 

@@ -88,7 +88,8 @@ public class TravelLocalReader {
                 end = ((Restriction.Range) edgeKey).end();
             }
 
-            // we scan local edges, Currently and also By Default, we only keep the newest version for each data.
+            // we scan local edges,
+            // Currently and also By Default, we only keep the newest version for each data.
             for (int edge : edgeTypes) {
                 DBKey startKey, endKey;
                 startKey = DBKey.MinDBKey(key, edge);

@@ -16,7 +16,8 @@ import java.util.HashSet;
 public class TravelLocalReaderWithCache {
 
     public static ArrayList<byte[]> filterVertices(OrderedRocksDBAPI localstore,
-                                                   HashSet<ByteBuffer> vertices, SingleStep currStep, long ts) {
+                                                   HashSet<ByteBuffer> vertices,
+                                                   SingleStep currStep, long ts) {
 
         ArrayList<byte[]> passedVertices = new ArrayList<>();
         ArrayList<ByteBuffer> copyOfVertices = new ArrayList<>(vertices);
@@ -98,7 +99,8 @@ public class TravelLocalReaderWithCache {
                     end = ((Restriction.Range) edgeKey).end();
                 }
 
-                // we scan local edges, Currently and also By Default, we only keep the newest version for each data.
+                // we scan local edges,
+                // Currently and also By Default, we only keep the newest version for each data.
                 for (int edge : edgeTypes) {
                     DBKey startKey, endKey;
                     startKey = DBKey.MinDBKey(key, edge);

@@ -8,6 +8,7 @@ import edu.ttu.discl.iogp.tengine.travel.GTravel;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.utils.ArrayPrimitives;
 import edu.ttu.discl.iogp.utils.GLogger;
+import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.commons.cli.*;
 import org.apache.thrift.TException;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -168,8 +170,6 @@ public class ClientMain {
         String line;
         long start = 0;
         BufferedReader br;
-        int edge = EdgeType.IN.get();
-        byte[] bEdge = ArrayPrimitives.itob(edge);
 
         String payload128 = "";
         for (int i = 0; i < 128; i++) payload128 += "a";
@@ -253,49 +253,62 @@ public class ClientMain {
                 */
                 break;
 
+            case "bfs":
+                start = System.currentTimeMillis();
+                List<ByteBuffer> rtn = client.bfs(("vertex" + id).getBytes(), EdgeType.OUT, id);
+                GLogger.info("[%d] Scan time: %d Size: %d",
+                        id, (System.currentTimeMillis() - start), rtn.size());
 
-            default:
-                if (op.endsWith("-SyncTravel")) {
+                for (ByteBuffer v : rtn){
+                    GLogger.info("Vertex: %s", new String(NIOHelper.getActiveArray(v)));
+                }
+                break;
+
+            case "travel":
+
+                /*
+                    First, Insert all edges.
+                 */
+                br = new BufferedReader(new FileReader(graphFile));
+                start = System.currentTimeMillis();
+                while ((line = br.readLine()) != null) {
+                    long sts = System.currentTimeMillis();
+                    String[] splits = line.split(" ");
+                    byte[] src = splits[0].getBytes();
+                    byte[] dst = splits[1].getBytes();
+
+                    client.insert(src, EdgeType.OUT, dst, val);
+                    client.insert(dst, EdgeType.IN, src, val);
+                }
+                GLogger.info("[%d] Insert time: %d", id, (System.currentTimeMillis() - start));
+
+                client.syncstatus();
+
+                byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
+
+                for (int steps = 2; steps < 8; steps += 2) {
+
                     start = System.currentTimeMillis();
-                    int trav_round = Integer.valueOf(op.split("-")[0]);
 
                     String vid = String.valueOf(id);
                     GTravel gt = new GTravel();
                     gt.v(("vertex" + vid).getBytes());
-                    for (int i = 0; i < trav_round; i++) {
+                    for (int i = 0; i < steps; i++) {
                         gt.et(bEdge).next();
                     }
                     gt.v();
 
                     client.submitSyncTravel(gt.plan());
-                    GLogger.info("SYNC [%d] Steps, VID[%s]: %d.",
-                            trav_round, vid, (System.currentTimeMillis() - start));
+                    GLogger.info("Client Travel [%d] Steps from VID[%s] cost %d.",
+                            steps, vid, (System.currentTimeMillis() - start));
 
-                } else if (op.endsWith("-FullSyncTravel")) {
-                    int trav_round = Integer.valueOf(op.split("-")[0]);
-
-                    br = new BufferedReader(new FileReader(summaryFile));
-                    while ((line = br.readLine()) != null) {
-                        GTravel gt = new GTravel();
-                        String[] splits = line.split(" ");
-                        int degree = Integer.parseInt(splits[0]);
-                        String vid = splits[1];
-
-                        gt.v(("vertex" + vid).getBytes());
-                        for (int i = 0; i < trav_round; i++) {
-                            gt.et(bEdge).next();
-                        }
-                        gt.v();
-
-                        start = System.currentTimeMillis();
-                        client.submitSyncTravel(gt.plan());
-                        GLogger.info("FullSyncTravel [%d] Steps, VID[%s] Degree[%d], Time:[%d]",
-                                trav_round, vid, degree, (System.currentTimeMillis() - start) + ".");
-                    }
-
-                } else {
-                    System.out.println("Undefined Op!");
                 }
+
+                break;
+
+            default:
+                System.out.println("Undefined Op!");
+
                 break;
         }
 

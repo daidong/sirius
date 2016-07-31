@@ -100,7 +100,7 @@ public abstract class AbstractSrv {
     public abstract Set<Integer> getEdgeLocs(byte[] src, int type);
     public abstract Set<Integer> getVertexLoc(byte[] src);
 
-    public int getEdgeLoc(byte[] src, int serverNum) {
+    public int getHashLoc(byte[] src, int serverNum) {
         JenkinsHash jh = new JenkinsHash();
         int hashi = Math.abs(jh.hash32(src));
         return (hashi % serverNum);

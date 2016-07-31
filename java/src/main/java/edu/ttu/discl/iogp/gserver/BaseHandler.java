@@ -33,6 +33,8 @@ public abstract class BaseHandler implements TGraphFSServer.Iface{
 
     abstract public int fennel(ByteBuffer src) throws RedirectException, TException;
 
+    abstract public int syncstatus(List<Status> statuses) throws RedirectException, TException;
+
     public int syncTravel(TravelCommand tc) throws TException {
         return syncEngine.syncTravel(tc);
     }

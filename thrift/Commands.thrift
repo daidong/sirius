@@ -21,6 +21,11 @@ struct Dist{
   2: required i32 vertexNum,
 }
 
+struct Status{
+  1: binary key,
+  2: i32 issplit,
+  3: i32 location,
+}
 /*
  * Travel
  */
@@ -76,6 +81,8 @@ service TGraphFSServer {
     i32 split(1:binary src) throws (1: RedirectException r),
     i32 reassign(1:binary src, 2:i32 type, 3:i32 target),
     i32 fennel(1:binary src) throws (1: RedirectException r),
+
+	i32 syncstatus(1: list<Status> statuses) throws (1: RedirectException r),
 
 	i32 syncTravel(1:TravelCommand tc),
 	i32 syncTravelMaster(1:TravelCommand tc),

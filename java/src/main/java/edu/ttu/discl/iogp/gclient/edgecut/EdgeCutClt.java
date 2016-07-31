@@ -1,12 +1,11 @@
 package edu.ttu.discl.iogp.gclient.edgecut;
 
-import edu.ttu.discl.iogp.gclient.Batch;
 import edu.ttu.discl.iogp.gclient.GraphClt;
 import edu.ttu.discl.iogp.gserver.EdgeType;
+import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.tengine.travel.GTravel;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.utils.ArrayPrimitives;
-import edu.ttu.discl.iogp.utils.JenkinsHash;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -17,8 +16,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class EdgeCutClt extends GraphClt {
 
@@ -34,7 +34,7 @@ public class EdgeCutClt extends GraphClt {
     }
 
     public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, long ts) throws TException {
-        int dstServer = getEdgeLocation(srcVertex, this.serverNum);
+        int dstServer = getHashLocation(srcVertex, this.serverNum);
         List<KeyValue> r = getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get());
         return r;
     }
@@ -45,26 +45,59 @@ public class EdgeCutClt extends GraphClt {
     }
 
     public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value, long ts) throws TException {
-        int dstServer = getEdgeLocation(srcVertex, this.serverNum);
+        int dstServer = getHashLocation(srcVertex, this.serverNum);
         int r = getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ByteBuffer.wrap(value));
         return r;
     }
 
     public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType) throws TException {
-        long ts = System.currentTimeMillis();
-        return scan(srcVertex, edgeType, ts);
-    }
-
-    public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long ts) throws TException {
-        return scan(srcVertex, edgeType, ts, ts);
-    }
-
-    public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType, long start_ts, long end_ts) throws TException {
-        int dstServer = getEdgeLocation(srcVertex, this.serverNum);
+        int dstServer = getHashLocation(srcVertex, this.serverNum);
         List<KeyValue> r = getClientConn(dstServer).scan(ByteBuffer.wrap(srcVertex), edgeType.get());
         return r;
     }
 
+    private class BfsEntry{
+        public ByteBuffer v;
+        public int step;
+        public BfsEntry(ByteBuffer b, int s){ v = b; step = s;}
+    }
+
+    public List<ByteBuffer> bfs(byte[] srcVertex, EdgeType edgeType, int max_steps) throws TException
+    {
+        HashSet<ByteBuffer> visited = new HashSet<>();
+        LinkedBlockingQueue<BfsEntry> queue = new LinkedBlockingQueue<>();
+
+        queue.offer(new BfsEntry(ByteBuffer.wrap(srcVertex), 0));
+
+        BfsEntry current;
+
+        while ((current = queue.poll()) != null)
+        {
+            byte[] key = NIOHelper.getActiveArray(current.v);
+            int step = current.step;
+
+            visited.add(current.v);
+
+            if (step < max_steps) {
+
+                List<KeyValue> results = scan(key, edgeType);
+
+                for (KeyValue kv : results) {
+                    DBKey newKey = new DBKey(kv.getKey());
+                    byte[] dst = newKey.dst;
+                    if (!visited.contains(ByteBuffer.wrap(dst)))
+                        queue.offer(new BfsEntry(ByteBuffer.wrap(dst), step + 1));
+                }
+            }
+        }
+
+        return new ArrayList<>(visited);
+    }
+
+    @Override
+    public int syncstatus() throws TException {
+        return 0;
+    }
 
     public static void main(String[] args) throws TException, IOException {
         int port = Integer.parseInt(args[0]);

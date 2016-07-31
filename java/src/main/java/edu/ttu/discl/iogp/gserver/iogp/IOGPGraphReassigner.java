@@ -4,7 +4,6 @@ import edu.ttu.discl.iogp.gserver.EdgeType;
 import edu.ttu.discl.iogp.sengine.DBKey;
 import edu.ttu.discl.iogp.thrift.KeyValue;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
-import edu.ttu.discl.iogp.utils.Constants;
 import edu.ttu.discl.iogp.utils.GLogger;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
@@ -84,6 +83,8 @@ public class IOGPGraphReassigner {
 		broadcast_finishes.putIfAbsent(src, lock.newCondition());
 		final Condition broadcast_finish = broadcast_finishes.get(src);
 
+		long start = System.currentTimeMillis();
+
 		for (int i = 0; i < inst.serverNum; i++){
 			TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
 			try {
@@ -109,7 +110,9 @@ public class IOGPGraphReassigner {
 			}
 		}
 
-		GLogger.info("[%d] broadcast and get fennel score from all servers", inst.getLocalIdx());
+		GLogger.info("[%d] Get Fennel Score From %d Servers Cost: %d",
+				inst.getLocalIdx(), inst.serverNum, System.currentTimeMillis() - start);
+
 		broadcasts.remove(src);
 		broadcast_finishes.remove(src);
 
@@ -146,7 +149,7 @@ public class IOGPGraphReassigner {
 			/**
 			 * The order is important. First setup target, then update the hash sorce
 			 */
-			int hash_loc = inst.getEdgeLoc(bsrc, inst.serverNum);
+			int hash_loc = inst.getHashLoc(bsrc, inst.serverNum);
 			// to the target server, "type" is how many this vertex has been reassigned.
 			if (c.reassign_times < 1) GLogger.error("c.reassign_times should never small than 1");
 

@@ -56,7 +56,7 @@ public class SyncTravelEdgeWorker implements Runnable {
         HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = new HashMap<>();
 
         int tid = engine.mid.addAndGet(1);
-        GLogger.info("S ER %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+        GLogger.debug("S ER %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
         /*
         HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(this.inst.localstore,
                 passedVertices, currStep, ts);
@@ -64,7 +64,7 @@ public class SyncTravelEdgeWorker implements Runnable {
 
         HashSet<byte[]> nextVertices = TravelLocalReaderWithCache.scanLocalEdges(this.instance.localstore,
                 engine.pool, passedVertices, currStep, ts);
-        GLogger.info("R ER %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+        GLogger.debug("R ER %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
 
         for (byte[] v : nextVertices) {
             Set<Integer> servers = instance.getVertexLoc(v);
@@ -100,7 +100,7 @@ public class SyncTravelEdgeWorker implements Runnable {
 
         try {
             TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-            GLogger.info("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+            GLogger.debug("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
             client.syncTravelExtend(tc1);
 
             /*
@@ -138,7 +138,7 @@ public class SyncTravelEdgeWorker implements Runnable {
                     .setSub_type(0);
 
             try {
-                GLogger.info("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
+                GLogger.debug("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
                 if (s == instance.getLocalIdx()) { //next vertices are stored locally. Directly process them.
                     engine.incrEdge2DstLocalCounter(travelId, nextKeys.size());
                     //engine.syncTravel(tc2);
@@ -171,7 +171,7 @@ public class SyncTravelEdgeWorker implements Runnable {
 
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                GLogger.debug("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                 client.syncTravelFinish(tc3);
 
             } catch (TException e) {
@@ -210,7 +210,7 @@ public class SyncTravelEdgeWorker implements Runnable {
 
                     try {
                         TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                        GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                        GLogger.debug("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                         client.syncTravelFinish(tc3);
 
                         /*

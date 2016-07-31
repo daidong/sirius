@@ -84,6 +84,9 @@ public abstract class GraphClt {
 
     abstract public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType) throws TException;
 
+    abstract public List<ByteBuffer> bfs(byte[] srcVertex, EdgeType edgeType, int max_steps) throws TException;
+
+    abstract public int syncstatus() throws TException;
 
     public int submitTravel(List<SingleStep> travelPlan) throws TException {
         long ts = System.currentTimeMillis();
@@ -137,7 +140,7 @@ public abstract class GraphClt {
         return 0;
     }
 
-    protected int getEdgeLocation(byte[] src, int serverNum) {
+    protected int getHashLocation(byte[] src, int serverNum) {
         JenkinsHash jh = new JenkinsHash();
         int hashi = Math.abs(jh.hash32(src));
         return (hashi % serverNum);

@@ -9,7 +9,6 @@ import edu.ttu.discl.iogp.utils.GLogger;
 import edu.ttu.discl.iogp.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.apache.thrift.transport.TTransportException;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -125,7 +124,7 @@ public class IOGPGraphSplitMover{
 
 		for (KeyValue kv : kvs){
 			DBKey key = new DBKey(kv.getKey());
-			int hash_target = inst.getEdgeLoc(key.dst, inst.serverNum);
+			int hash_target = inst.getHashLoc(key.dst, inst.serverNum);
 			if (!loadsOnEachServer.containsKey(hash_target))
 				loadsOnEachServer.put(hash_target, new ArrayList<KeyValue>());
 			loadsOnEachServer.get(hash_target).add(kv);

@@ -50,14 +50,14 @@ public class SyncTravelVertexWorker implements Runnable {
         }
 
         int tid = engine.mid.addAndGet(1);
-        GLogger.info("S VR %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+        GLogger.debug("S VR %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
         /*
         ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(this.inst.localstore,
                 engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
         */
         ArrayList<byte[]> passedVertices = TravelLocalReaderWithCache.filterVertices(this.instance.localstore, engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
 
-        GLogger.info("R VR %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+        GLogger.debug("R VR %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
 
         if (lastStep) {
             TravelCommand tc = new TravelCommand();
@@ -73,7 +73,7 @@ public class SyncTravelVertexWorker implements Runnable {
             tc.setVals(vals);
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.info("S TR %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                GLogger.debug("S TR %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                 client.syncTravelRtn(tc);
                 /*
                 Client client = inst.getClientConn(replyTo);
@@ -100,11 +100,13 @@ public class SyncTravelVertexWorker implements Runnable {
                 }
             }
 
-            // report to coordinator, round 'stepId' should add these many extra servers besides vertices locations
+            // report to coordinator, round 'stepId' should add these
+            // many extra servers besides vertices locations
             List<Integer> addrs = new ArrayList<Integer>(perServerVertices.keySet());
 
             TravelCommand tc_ext = new TravelCommand();
-            tc_ext.setTravelId(travelId).setStepId(stepId).setType(TravelCommandType.SYNC_TRAVEL_EXTEND)
+            tc_ext.setTravelId(travelId)
+                    .setStepId(stepId).setType(TravelCommandType.SYNC_TRAVEL_EXTEND)
                     .setGet_from(instance.getLocalIdx()).setExt_srv(addrs)
                     .setLocal_id(instance.getLocalIdx())
                     .setSub_type(1);  //subtype==1 means we are extending to access edges
@@ -114,7 +116,7 @@ public class SyncTravelVertexWorker implements Runnable {
 
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.info("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                GLogger.debug("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                 client.syncTravelExtend(tc_ext);
                 /*
                 Client client = inst.getClientConn(replyTo);
@@ -136,7 +138,8 @@ public class SyncTravelVertexWorker implements Runnable {
                     nextKeys.add(tbb);
                 }
 
-                travelPlan.get(stepId).vertexKeyRestrict = new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
+                travelPlan.get(stepId).vertexKeyRestrict =
+                        new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
                 String travelPayLoad = engine.serializeTravelPlan(travelPlan);
 
                 TravelCommand tc1 = new TravelCommand();
@@ -146,8 +149,9 @@ public class SyncTravelVertexWorker implements Runnable {
                         .setSub_type(1);
 
                 try {
-                    GLogger.info("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 1);
-                    GLogger.debug("[%d] SyncTravelVertexWorker send SyncTravel to %d", instance.getLocalIdx(), s);
+                    GLogger.debug("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 1);
+                    GLogger.debug("[%d] SyncTravelVertexWorker send SyncTravel to %d",
+                            instance.getLocalIdx(), s);
 
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
                     aclient.syncTravel(tc1, new BroadCastTVCallback(s));
@@ -184,25 +188,22 @@ public class SyncTravelVertexWorker implements Runnable {
                 if (targets.isEmpty()) { //finish all sends, send SYNC_TRAVEL_FINISH Command
 
                     TravelCommand tc3 = new TravelCommand();
-                    tc3.setType(TravelCommandType.SYNC_TRAVEL_FINISH).setTravelId(travelId)
-                            .setStepId(stepId).setGet_from(getFrom).setLocal_id(instance.getLocalIdx())
-                            .setReply_to(replyTo).setTs(ts).setSub_type(0); //finish on edges
+                    tc3.setType(TravelCommandType.SYNC_TRAVEL_FINISH)
+                            .setTravelId(travelId)
+                            .setStepId(stepId)
+                            .setGet_from(getFrom)
+                            .setLocal_id(instance.getLocalIdx())
+                            .setReply_to(replyTo)
+                            .setTs(ts)
+                            .setSub_type(0); //finish on edges
 
-                    //GLogger.warn("[%d] SyncTravelVertexWorker stepId[%d] Finish %d to %s (%d)",
-                    //        inst.getLocalIdx(), stepId,
-                    //        getFrom, inst.getLocalIdx(), 0);
                     try {
                         TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                        GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                        GLogger.debug("S TF %d %d %d",
+                                instance.getLocalIdx(),
+                                replyTo, System.nanoTime());
                         client.syncTravelFinish(tc3);
 
-                        /*
-                        Client client = inst.getClientConn(replyTo);
-                        synchronized (client) {
-                            GLogger.info("S TF %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
-                            client.syncTravelFinish(tc3);
-                        }
-                        */
                     } catch (TException e) {
                         e.printStackTrace();
                     }
