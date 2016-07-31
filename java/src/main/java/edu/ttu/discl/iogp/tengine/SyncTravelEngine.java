@@ -387,7 +387,7 @@ public class SyncTravelEngine {
 
         if (isSyncServerEmpty(travelId, stepId)) {
             GLogger.warn("Step %d Finishes at %d", stepId, costTime);
-            GLogger.debug("[%d] TravelId[%d] Starting %s, costs: %d, Local Counter[%d]",
+            GLogger.info("[%d] TravelId[%d] Starting %s, costs: %d, Local Counter[%d]",
                     instance.getLocalIdx(), travelId,
                     new String(this.tsrcs.get(travelId)),
                     costTime, getEdge2DstLocalCounter(travelId));
@@ -444,10 +444,10 @@ public class SyncTravelEngine {
         int subType = tc.getSub_type();
         int remote = tc.getLocal_id();
 
-        GLogger.debug("R TE %d %d %d", instance.getLocalIdx(), remote, System.nanoTime());
+        GLogger.info("R TE %d %d %d", instance.getLocalIdx(), remote, System.nanoTime());
         HashSet<Integer> srvs = new HashSet<Integer>(tc.getExt_srv());
         addToSyncServers(travelId, stepId, getFrom, srvs, subType);
-        GLogger.debug("[%d] stepId[%d] Extends %d -> %s",
+        GLogger.info("[%d] stepId[%d] Extends %d -> %s",
                 instance.getLocalIdx(), stepId, getFrom, srvs);
         return 0;
     }
@@ -463,7 +463,7 @@ public class SyncTravelEngine {
         long ts = tc.getTs();
 
         //dst or local_id is the sender. Not src.
-        GLogger.debug("R TF %d %d %d", instance.getLocalIdx(), dst, System.nanoTime());
+        GLogger.info("R TF %d %d %d", instance.getLocalIdx(), dst, System.nanoTime());
 
         if (type == 0){
             //vertex worker finish. should not start next step.
@@ -506,7 +506,7 @@ public class SyncTravelEngine {
                         .setTs(ts);
 
                 for (int s : servers) {
-                    GLogger.debug("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
+                    GLogger.info("S TS %d %d %d", instance.getLocalIdx(), s, System.nanoTime());
 
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
                     aclient.syncTravelStart(tc1, new SendTraverlStartCallback(s));

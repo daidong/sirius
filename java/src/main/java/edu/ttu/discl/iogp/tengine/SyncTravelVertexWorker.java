@@ -116,7 +116,7 @@ public class SyncTravelVertexWorker implements Runnable {
 
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.debug("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                GLogger.info("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                 client.syncTravelExtend(tc_ext);
                 /*
                 Client client = inst.getClientConn(replyTo);
@@ -149,8 +149,8 @@ public class SyncTravelVertexWorker implements Runnable {
                         .setSub_type(1);
 
                 try {
-                    GLogger.debug("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 1);
-                    GLogger.debug("[%d] SyncTravelVertexWorker send SyncTravel to %d",
+                    GLogger.info("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 1);
+                    GLogger.info("[%d] SyncTravelVertexWorker send SyncTravel to %d",
                             instance.getLocalIdx(), s);
 
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
@@ -182,7 +182,7 @@ public class SyncTravelVertexWorker implements Runnable {
             synchronized (targets) {
                 targets.remove(this.finished);
 
-                GLogger.debug("[%d] VertexBroadcastTVCallback Complete sending %d, %s not finish yet",
+                GLogger.info("[%d] VertexBroadcastTVCallback Complete sending %d, %s not finish yet",
                         instance.getLocalIdx(), this.finished, targets);
 
                 if (targets.isEmpty()) { //finish all sends, send SYNC_TRAVEL_FINISH Command
@@ -199,7 +199,7 @@ public class SyncTravelVertexWorker implements Runnable {
 
                     try {
                         TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                        GLogger.debug("S TF %d %d %d",
+                        GLogger.info("S TF %d %d %d",
                                 instance.getLocalIdx(),
                                 replyTo, System.nanoTime());
                         client.syncTravelFinish(tc3);

@@ -116,10 +116,10 @@ public class SyncTravelEdgeWorker implements Runnable {
 
         // send sync_travel command to all covered servers
         this.targets = new HashSet<>(perServerVertices.keySet());
-        GLogger.debug("EdgeWorker Broadcast to %s", this.targets);
+        GLogger.info("EdgeWorker Broadcast to %s", this.targets);
 
         for (int s : perServerVertices.keySet()) {
-            GLogger.debug("EdgeWorker Broadcast to server %d", s);
+            GLogger.info("EdgeWorker Broadcast to server %d", s);
 
             List<byte[]> nextKeys = new ArrayList<byte[]>();
             for (ByteBuffer bb : perServerVertices.get(s)) {
@@ -138,7 +138,7 @@ public class SyncTravelEdgeWorker implements Runnable {
                     .setSub_type(0);
 
             try {
-                GLogger.debug("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
+                GLogger.info("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
                 if (s == instance.getLocalIdx()) { //next vertices are stored locally. Directly process them.
                     engine.incrEdge2DstLocalCounter(travelId, nextKeys.size());
                     //engine.syncTravel(tc2);
@@ -171,7 +171,7 @@ public class SyncTravelEdgeWorker implements Runnable {
 
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.debug("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                 client.syncTravelFinish(tc3);
 
             } catch (TException e) {
@@ -194,7 +194,7 @@ public class SyncTravelEdgeWorker implements Runnable {
             synchronized (targets) {
                 targets.remove(this.finished);
 
-                GLogger.debug("[%d] EdgeBroadcastTVCallback Finish %d to %d(%d), Complete sending %d, %s not finish " +
+                GLogger.info("[%d] EdgeBroadcastTVCallback Finish %d to %d(%d), Complete sending %d, %s not finish " +
                         "yet",
                         instance.getLocalIdx(), getFrom, instance.getLocalIdx(), 1, this.finished, targets);
 
@@ -210,7 +210,7 @@ public class SyncTravelEdgeWorker implements Runnable {
 
                     try {
                         TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                        GLogger.debug("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                        GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
                         client.syncTravelFinish(tc3);
 
                         /*

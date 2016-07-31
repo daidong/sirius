@@ -103,7 +103,7 @@ public class SyncTravelPreFetcher {
                  */
             } finally {
                 //GLogger.warn("Cached: %d", engine.pool.getCachedItemNumber());
-                GLogger.debug("R PL %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+                GLogger.info("R PL %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
             }
         }
     }
