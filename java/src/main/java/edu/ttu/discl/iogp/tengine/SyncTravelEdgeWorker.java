@@ -27,8 +27,13 @@ public class SyncTravelEdgeWorker implements Runnable {
     HashSet<ByteBuffer> keys;
     Set<Integer> targets = null;
 
-    public SyncTravelEdgeWorker(AbstractSrv s, SyncTravelEngine e, long tid, int sid, int getFrom,
-                                int replyTo, long ts,
+    public SyncTravelEdgeWorker(AbstractSrv s,
+                                SyncTravelEngine e,
+                                long tid,
+                                int sid,
+                                int getFrom,
+                                int replyTo,
+                                long ts,
                                 HashSet<ByteBuffer> kSets) {
         this.instance = s;
         this.engine = e;
@@ -42,8 +47,8 @@ public class SyncTravelEdgeWorker implements Runnable {
 
     @Override
     public void run() {
-        GLogger.debug("[%d] Start Edge Work Thread stepId[%d] %d -> %d",
-                instance.getLocalIdx(), stepId, getFrom, instance.getLocalIdx());
+        GLogger.info("Server [%d] Start Read Edges for stepId [%d], Command from %d",
+                instance.getLocalIdx(), stepId, getFrom);
 
         ArrayList<SingleStep> travelPlan = engine.getSyncTravelPlan(travelId);
         SingleStep currStep = travelPlan.get(stepId);
@@ -56,15 +61,19 @@ public class SyncTravelEdgeWorker implements Runnable {
         HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = new HashMap<>();
 
         int tid = engine.mid.addAndGet(1);
-        GLogger.debug("S ER %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+        GLogger.info("Server [%d] Read Local Edges for %d at %d",
+                instance.getLocalIdx(), stepId, System.nanoTime());
         /*
         HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(this.inst.localstore,
                 passedVertices, currStep, ts);
         */
 
-        HashSet<byte[]> nextVertices = TravelLocalReaderWithCache.scanLocalEdges(this.instance.localstore,
+        HashSet<byte[]> nextVertices = TravelLocalReaderWithCache.scanLocalEdges(
+                this.instance.localstore,
                 engine.pool, passedVertices, currStep, ts);
-        GLogger.debug("R ER %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+
+        GLogger.info("Server [%d] Finish Read Local Edges for %d at %d",
+                instance.getLocalIdx(), stepId, System.nanoTime());
 
         for (byte[] v : nextVertices) {
             Set<Integer> servers = instance.getVertexLoc(v);
@@ -100,7 +109,9 @@ public class SyncTravelEdgeWorker implements Runnable {
 
         try {
             TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-            GLogger.debug("S TE %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+            GLogger.debug("%d Send TravelExtend to %d at %d",
+                    instance.getLocalIdx(), replyTo, System.nanoTime());
+
             client.syncTravelExtend(tc1);
 
             /*
@@ -116,10 +127,10 @@ public class SyncTravelEdgeWorker implements Runnable {
 
         // send sync_travel command to all covered servers
         this.targets = new HashSet<>(perServerVertices.keySet());
-        GLogger.info("EdgeWorker Broadcast to %s", this.targets);
+        GLogger.debug("EdgeWorker Broadcast to %s", this.targets);
 
         for (int s : perServerVertices.keySet()) {
-            GLogger.info("EdgeWorker Broadcast to server %d", s);
+            GLogger.debug("EdgeWorker Broadcast to server %d", s);
 
             List<byte[]> nextKeys = new ArrayList<byte[]>();
             for (ByteBuffer bb : perServerVertices.get(s)) {
@@ -138,12 +149,14 @@ public class SyncTravelEdgeWorker implements Runnable {
                     .setSub_type(0);
 
             try {
-                GLogger.info("S TV %d %d %d %d", instance.getLocalIdx(), s, System.nanoTime(), 0);
-                if (s == instance.getLocalIdx()) { //next vertices are stored locally. Directly process them.
+                GLogger.info("%d Send Travel Comand to %d at %d for vertex",
+                        instance.getLocalIdx(), s, System.nanoTime());
+
+                if (s == instance.getLocalIdx()) {
+                    //next vertices are stored locally. Directly process them.
                     engine.incrEdge2DstLocalCounter(travelId, nextKeys.size());
                     //engine.syncTravel(tc2);
                 }
-                //GLogger.warn("[%d] SyncTravelEdgeWorker send SyncTravel to %d", inst.getLocalIdx(), s);
 
                 TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
                 aclient.syncTravel(tc2, new EdgeBroadCastTVCallback(s));
@@ -171,7 +184,9 @@ public class SyncTravelEdgeWorker implements Runnable {
 
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                GLogger.info("%d Send TravelFinish to %d at %d on reading edges",
+                        instance.getLocalIdx(), replyTo, System.nanoTime());
+
                 client.syncTravelFinish(tc3);
 
             } catch (TException e) {
@@ -194,9 +209,7 @@ public class SyncTravelEdgeWorker implements Runnable {
             synchronized (targets) {
                 targets.remove(this.finished);
 
-                GLogger.info("[%d] EdgeBroadcastTVCallback Finish %d to %d(%d), Complete sending %d, %s not finish " +
-                        "yet",
-                        instance.getLocalIdx(), getFrom, instance.getLocalIdx(), 1, this.finished, targets);
+                GLogger.debug("[%d] EdgeCallback Finish %d to %d(%d), Complete sending %d, %s not finish yet", instance.getLocalIdx(), getFrom, instance.getLocalIdx(), 1, this.finished, targets);
 
                 if (targets.isEmpty()) { //finish all sends, send SYNC_TRAVEL_FINISH Command
 
@@ -210,7 +223,9 @@ public class SyncTravelEdgeWorker implements Runnable {
 
                     try {
                         TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                        GLogger.info("S TF %d %d %d", instance.getLocalIdx(), replyTo, System.nanoTime());
+                        GLogger.info("%d Send TravelFinish to %d at %d on reading edges",
+                                instance.getLocalIdx(), replyTo, System.nanoTime());
+
                         client.syncTravelFinish(tc3);
 
                         /*
