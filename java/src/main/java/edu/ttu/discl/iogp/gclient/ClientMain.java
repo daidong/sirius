@@ -295,13 +295,13 @@ public class ClientMain {
 
                 byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
 
-                for (int steps = 2; steps < 8; steps += 2) {
+                for (int steps = 2; steps <= 8; steps += 2) {
 
                     start = System.currentTimeMillis();
 
                     String vid = String.valueOf(id);
                     GTravel gt = new GTravel();
-                    gt.v(("vertex" + vid).getBytes());
+                    gt.v((vid).getBytes());
                     for (int i = 0; i < steps; i++) {
                         gt.et(bEdge).next();
                     }
