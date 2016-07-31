@@ -15,13 +15,14 @@ import java.util.HashSet;
 
 public class TravelLocalReader {
 
-    public static ArrayList<byte[]> filterVertices(OrderedRocksDBAPI localstore,
-                                                   HashSet<ByteBuffer> vertices, SingleStep currStep, long ts) {
+    public static ArrayList<byte[]> filterVertices(
+            OrderedRocksDBAPI localstore,
+            HashSet<ByteBuffer> vertices,
+            SingleStep currStep, long ts) {
 
         ArrayList<byte[]> passedVertices = new ArrayList<>();
-        ArrayList<ByteBuffer> copyOfVertices = new ArrayList<>(vertices);
-        
-        for (ByteBuffer bkey : copyOfVertices) {
+
+        for (ByteBuffer bkey : vertices) {
             byte[] key = NIOHelper.getActiveArray(bkey);
             Restriction sar = currStep.vertexStaticAttrRestrict;
             Restriction dar = currStep.vertexDynAttrRestrict;
@@ -66,42 +67,20 @@ public class TravelLocalReader {
 
     public static HashSet<byte[]> scanLocalEdges(OrderedRocksDBAPI localstore,
             ArrayList<byte[]> passedVertices, SingleStep currStep, long ts) {
+
         HashSet<byte[]> nextVertices = new HashSet<>();
-        ArrayList<byte[]> copyOfVertices = new ArrayList<>(passedVertices);
-        
-        for (byte[] key : copyOfVertices) {
-            Restriction edgeType = currStep.typeRestrict;
-            Restriction edgeKey = currStep.edgeKeyRestrict;
-            ArrayList<Integer> edgeTypes = new ArrayList<Integer>();
 
-            if (edgeType != null) {
-                for (byte[] v : edgeType.values()) {
-                    edgeTypes.add(ArrayPrimitives.btoi(v, 0));
-                }
+        for (byte[] key : passedVertices) {
+            DBKey startKey, endKey;
+            startKey = DBKey.MinDBKey(key, EdgeType.OUT.get());
+            endKey = DBKey.MaxDBKey(key, EdgeType.OUT.get());
+
+            ArrayList<KeyValue> kvs = localstore.scanKV(startKey.toKey(), endKey.toKey());
+            for (KeyValue p : kvs) {
+                DBKey dbKey = new DBKey(p.getKey());
+                nextVertices.add(dbKey.dst);
             }
 
-            byte[] start = null;
-            byte[] end = null;
-            // edgeKey can only be RANGE
-            if (edgeKey != null) {
-                start = ((Restriction.Range) edgeKey).starter();
-                end = ((Restriction.Range) edgeKey).end();
-            }
-
-            // we scan local edges,
-            // Currently and also By Default, we only keep the newest version for each data.
-            for (int edge : edgeTypes) {
-                DBKey startKey, endKey;
-                startKey = DBKey.MinDBKey(key, edge);
-                endKey = DBKey.MaxDBKey(key, edge);
-
-                HashSet<ByteBuffer> contains = new HashSet<ByteBuffer>();
-                ArrayList<KeyValue> kvs = localstore.scanKV(startKey.toKey(), endKey.toKey());
-                for (KeyValue p : kvs) {
-                    DBKey dbKey = new DBKey(p.getKey());
-                    nextVertices.add(dbKey.dst);
-                }
-            }
         }
         return nextVertices;
     }

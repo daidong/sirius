@@ -2,7 +2,6 @@ package edu.ttu.discl.iogp.tengine;
 
 import edu.ttu.discl.iogp.gserver.AbstractSrv;
 import edu.ttu.discl.iogp.gserver.EdgeType;
-import edu.ttu.discl.iogp.tengine.prefetch.TravelLocalReaderWithCache;
 import edu.ttu.discl.iogp.tengine.travel.SingleRestriction;
 import edu.ttu.discl.iogp.tengine.travel.SingleStep;
 import edu.ttu.discl.iogp.thrift.KeyValue;
@@ -56,7 +55,10 @@ public class SyncTravelVertexWorker implements Runnable {
         ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(this.inst.localstore,
                 engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
         */
-        ArrayList<byte[]> passedVertices = TravelLocalReaderWithCache.filterVertices(this.instance.localstore, engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
+        ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(
+                this.instance.localstore,
+                engine.getSyncTravelVertices(this.travelId, this.stepId),
+                currStep, ts);
 
         GLogger.info("Server %d Finish Read %d Local Vertices for %d at %d",
                 instance.getLocalIdx(), passedVertices.size(), stepId, System.nanoTime());

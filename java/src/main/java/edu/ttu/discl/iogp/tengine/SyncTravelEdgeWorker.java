@@ -1,7 +1,6 @@
 package edu.ttu.discl.iogp.tengine;
 
 import edu.ttu.discl.iogp.gserver.AbstractSrv;
-import edu.ttu.discl.iogp.tengine.prefetch.TravelLocalReaderWithCache;
 import edu.ttu.discl.iogp.tengine.travel.SingleRestriction;
 import edu.ttu.discl.iogp.tengine.travel.SingleStep;
 import edu.ttu.discl.iogp.thrift.TGraphFSServer;
@@ -68,9 +67,8 @@ public class SyncTravelEdgeWorker implements Runnable {
                 passedVertices, currStep, ts);
         */
 
-        HashSet<byte[]> nextVertices = TravelLocalReaderWithCache.scanLocalEdges(
-                this.instance.localstore,
-                engine.pool, passedVertices, currStep, ts);
+        HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(
+                this.instance.localstore, passedVertices, currStep, ts);
 
         GLogger.info("Server [%d] Finish Read %d Local Edges for step %d at %d",
                 instance.getLocalIdx(), nextVertices.size(), stepId, System.nanoTime());
