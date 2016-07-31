@@ -508,7 +508,7 @@ public class SyncTravelEngine {
 
             long costTime = System.currentTimeMillis() - getStartSyncTravelTime(travelId);
 
-            if (isSyncServerEmpty(travelId, stepId)) {
+            if (isSyncServerEmpty(travelId, stepId) && !isSyncServerEmpty(travelId, stepId + 1)) {
                 GLogger.warn("[%d] TravelFinish Step %d Finishes at %d",
                         instance.getLocalIdx(), stepId, costTime);
 
@@ -542,6 +542,18 @@ public class SyncTravelEngine {
                     aclient.syncTravelStart(tc1, new SendTraverlStartCallback(s));
                 }
                 */
+                }
+            } else if (isSyncServerEmpty(travelId, stepId) && isSyncServerEmpty(travelId, stepId + 1)){
+
+                GLogger.info("in SyncTravelRtn, Step %d Finishes at %d", stepId, costTime);
+                GLogger.info("[%d] TravelId[%d] Starting %s, costs: %d",
+                        instance.getLocalIdx(), travelId,
+                        new String(this.tsrcs.get(travelId)),
+                        costTime);
+
+                Object lock = this.locks.get(travelId);
+                synchronized (lock) {
+                    lock.notify();
                 }
             }
         }
