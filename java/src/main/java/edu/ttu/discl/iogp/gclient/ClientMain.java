@@ -67,7 +67,7 @@ public class ClientMain {
                 .build());
 
         options.addOption(Option.builder("id").hasArg()
-                .desc("ID of the concurrent clients")
+                .desc("ID of the requested vertex")
                 .build());
 
         options.addOption(Option.builder("graph").hasArg()
@@ -162,7 +162,7 @@ public class ClientMain {
                 break;
         }
 
-        int id = Integer.valueOf(rst[2]);
+        String id = rst[2];
         String graphFile = rst[3];
 
         String line;
@@ -188,7 +188,7 @@ public class ClientMain {
                     client.insert(src, EdgeType.OUT, dst, val);
                     client.insert(dst, EdgeType.IN, src, val);
                 }
-                GLogger.info("[%d] Insert time: %d", id, (System.currentTimeMillis() - start));
+                GLogger.info("Insert time: %d", (System.currentTimeMillis() - start));
                 break;
 
             case "insert100":
@@ -200,7 +200,7 @@ public class ClientMain {
                     client.insert(src, EdgeType.OUT, dst, val);
                     client.insert(dst, EdgeType.IN, src, val);
                 }
-                GLogger.info("[%d] Insert100 time: %d", id, (System.currentTimeMillis() - start));
+                GLogger.info("Insert100 time: %d", (System.currentTimeMillis() - start));
                 break;
 
             case "insert1000":
@@ -212,7 +212,7 @@ public class ClientMain {
                     client.insert(src, EdgeType.OUT, dst, val);
                     client.insert(dst, EdgeType.IN, src, val);
                 }
-                GLogger.info("[%d] Insert1000 time: %d", id, (System.currentTimeMillis() - start));
+                GLogger.info("Insert1000 time: %d", (System.currentTimeMillis() - start));
                 break;
 
             case "insert10000":
@@ -224,7 +224,7 @@ public class ClientMain {
                     client.insert(src, EdgeType.OUT, dst, val);
                     client.insert(dst, EdgeType.IN, src, val);
                 }
-                GLogger.info("[%d] Insert10000 time: %d", id, (System.currentTimeMillis() - start));
+                GLogger.info("Insert10000 time: %d", (System.currentTimeMillis() - start));
                 break;
             case "insert100000":
                 start = System.currentTimeMillis();
@@ -235,13 +235,13 @@ public class ClientMain {
                     client.insert(src, EdgeType.OUT, dst, val);
                     client.insert(dst, EdgeType.IN, src, val);
                 }
-                GLogger.info("[%d] Insert100000 time: %d", id, (System.currentTimeMillis() - start));
+                GLogger.info("Insert100000 time: %d", (System.currentTimeMillis() - start));
                 break;
 
             case "scan":
                 start = System.currentTimeMillis();
-                List<KeyValue> r = client.scan(("vertex" + id).getBytes(), EdgeType.OUT);
-                GLogger.info("[%d] Scan time: %d Size: %d",
+                List<KeyValue> r = client.scan((id).getBytes(), EdgeType.OUT);
+                GLogger.info("Scan %s time: %d Size: %d",
                         id, (System.currentTimeMillis() - start), r.size());
                 /*
                 for (KeyValue kv : r){
@@ -253,8 +253,8 @@ public class ClientMain {
 
             case "bfs":
                 start = System.currentTimeMillis();
-                List<ByteBuffer> rtn = client.bfs(("vertex" + id).getBytes(), EdgeType.OUT, id);
-                GLogger.info("[%d] Scan time: %d Size: %d",
+                List<ByteBuffer> rtn = client.bfs((id).getBytes(), EdgeType.OUT, 1);
+                GLogger.info("BFS %s cost time: %d Size: %d",
                         id, (System.currentTimeMillis() - start), rtn.size());
 
                 for (ByteBuffer v : rtn){
@@ -281,7 +281,7 @@ public class ClientMain {
                     client.insert(src, EdgeType.OUT, dst, val);
                     client.insert(dst, EdgeType.IN, src, val);
                 }
-                GLogger.info("[%d] Insert time: %d", id, (System.currentTimeMillis() - start));
+                GLogger.info("Insert time: %d", (System.currentTimeMillis() - start));
 
                 try {
                     Thread.sleep(1000);
@@ -299,7 +299,7 @@ public class ClientMain {
 
                     start = System.currentTimeMillis();
 
-                    String vid = String.valueOf(id);
+                    String vid = id;
                     GTravel gt = new GTravel();
                     gt.v((vid).getBytes());
                     for (int i = 0; i < steps; i++) {

@@ -50,6 +50,4 @@ do
     line=`expr 1 + $line`
 done
 
-id=0
-
 ~/iogp-code/release/iogp-0.1/bin/client.sh -type ${server_type} -op $op -id $id -graph ${graph_file} -srvlist $seeds
