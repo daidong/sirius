@@ -163,9 +163,7 @@ public class ClientMain {
         }
 
         int id = Integer.valueOf(rst[2]);
-        String graphDir = rst[3];
-        String graphFile = graphDir + "/" + id;
-        String summaryFile = graphDir + "/" + "rmat-sum";
+        String graphFile = rst[3];
 
         String line;
         long start = 0;
@@ -273,6 +271,9 @@ public class ClientMain {
                 start = System.currentTimeMillis();
                 while ((line = br.readLine()) != null) {
                     long sts = System.currentTimeMillis();
+                    if (line.startsWith("#"))
+                        continue;
+
                     String[] splits = line.split(" ");
                     byte[] src = splits[0].getBytes();
                     byte[] dst = splits[1].getBytes();
