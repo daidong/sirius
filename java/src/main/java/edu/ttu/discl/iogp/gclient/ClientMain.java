@@ -274,7 +274,7 @@ public class ClientMain {
                     if (line.startsWith("#"))
                         continue;
 
-                    String[] splits = line.split(" ");
+                    String[] splits = line.split("\\W+");
                     byte[] src = splits[0].getBytes();
                     byte[] dst = splits[1].getBytes();
 
