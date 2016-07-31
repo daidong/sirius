@@ -94,7 +94,7 @@ public class EdgeCutHandler extends BaseHandler {
 
     @Override
     public int syncstatus(List<Status> statuses) throws RedirectException, RedirectException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return 0;
     }
 
 }

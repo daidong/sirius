@@ -283,6 +283,12 @@ public class ClientMain {
                 }
                 GLogger.info("[%d] Insert time: %d", id, (System.currentTimeMillis() - start));
 
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
                 client.syncstatus();
 
                 byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
