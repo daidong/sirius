@@ -291,7 +291,7 @@ public class ClientMain {
 
                 client.syncstatus();
 
-                System.out.println("Start Travel");
+                System.out.println("Start Travel " + id);
 
                 byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
 
@@ -299,9 +299,8 @@ public class ClientMain {
 
                     start = System.currentTimeMillis();
 
-                    String vid = id;
                     GTravel gt = new GTravel();
-                    gt.v((vid).getBytes());
+                    gt.v((id).getBytes());
                     for (int i = 0; i < steps; i++) {
                         gt.et(bEdge).next();
                     }
@@ -309,7 +308,7 @@ public class ClientMain {
 
                     client.submitSyncTravel(gt.plan());
                     GLogger.info("Client Travel [%d] Steps from VID[%s] cost %d.",
-                            steps, vid, (System.currentTimeMillis() - start));
+                            steps, id, (System.currentTimeMillis() - start));
 
                 }
 

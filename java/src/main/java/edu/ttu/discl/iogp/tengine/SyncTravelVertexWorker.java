@@ -77,7 +77,7 @@ public class SyncTravelVertexWorker implements Runnable {
             tc.setVals(vals);
             try {
                 TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                GLogger.debug("%d Send TravelRtn to %d at %d",
+                GLogger.info("%d Send TravelRtn to %d at %d",
                         instance.getLocalIdx(), replyTo, System.nanoTime());
 
                 client.syncTravelRtn(tc);

@@ -15,7 +15,7 @@ public class Constants {
 	public final static int EDGE_SPLIT_WRONG_SRV = 2;
 
 	public final static int SPLIT_THRESHOLD = 60;
-	public final static int REASSIGN_THRESHOLD = 30;
+	public final static int REASSIGN_THRESHOLD = 6;
 
 	public static int RETRY = 3;
 	
