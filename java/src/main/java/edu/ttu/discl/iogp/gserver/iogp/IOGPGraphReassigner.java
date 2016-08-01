@@ -91,9 +91,14 @@ public class IOGPGraphReassigner {
 				if (i != inst.getLocalIdx()) {
 					aclient.fennel(src, new CollectEdgeCountersCallback(src, i));
 				} else {
-					fennel_score[i] = (0 - inst.size.get());
-					if (broadcast.decrementAndGet() == 0) {
-						jump = true;
+					lock.lock();
+					try {
+						fennel_score[i] = (0 - inst.size.get());
+						if (broadcast.decrementAndGet() == 0) {
+							jump = true;
+						}
+					} finally {
+						lock.unlock();
 					}
 				}
 			} catch (TException e) {
