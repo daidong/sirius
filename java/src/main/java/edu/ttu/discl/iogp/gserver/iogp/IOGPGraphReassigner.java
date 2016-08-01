@@ -35,11 +35,14 @@ public class IOGPGraphReassigner {
 				AtomicInteger broadcast = broadcasts.get(src);
 				final Condition broadcast_finish = broadcast_finishes.get(src);
 
-				GLogger.info("[%d] In Fennel Callback broadcast for %s, broadcast: %d",
-						inst.getLocalIdx(), new String(NIOHelper.getActiveArray(src)), broadcast.get());
+				GLogger.info("[%d] In Fennel Callback broadcast for %s from %d, broadcast: %d",
+						inst.getLocalIdx(), new String(NIOHelper.getActiveArray(src)),
+						finished,
+						broadcast.get());
 
 				fennel_score[finished] = t.getResult();
 				if (broadcast.decrementAndGet() == 0) {
+					GLogger.info("Signal!");
 					broadcast_finish.signal();
 				}
 			} catch (TException e) {
@@ -93,6 +96,10 @@ public class IOGPGraphReassigner {
 				} else {
 					lock.lock();
 					try {
+						GLogger.info("[%d] directly get Fennel score for %s from %d, broadcast: %d",
+								inst.getLocalIdx(), new String(NIOHelper.getActiveArray(src)),
+								i, broadcast.get());
+
 						fennel_score[i] = (0 - inst.size.get());
 						if (broadcast.decrementAndGet() == 0) {
 							jump = true;
