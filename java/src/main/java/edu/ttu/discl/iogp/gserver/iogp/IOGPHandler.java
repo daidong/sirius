@@ -471,6 +471,7 @@ public class IOGPHandler extends BaseHandler {
             inst.syncedLocationInfo.put(v, location);
             inst.syncedSplitInfo.put(v, is_split);
         }
+        GLogger.info("Memory Consumption: " + inst.edgecounters.size());
         return 0;
     }
 
