@@ -454,11 +454,11 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public int fennel(ByteBuffer src) throws RedirectException {
-        GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "fennel");
+        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "fennel");
         inst.edgecounters.putIfAbsent(src, new Counters());
         Counters c = inst.edgecounters.get(src);
         int score = 2 * (c.pli + c.plo) - inst.size.get();
-        GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "fennel");
+        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "fennel");
         return score;
     }
 
