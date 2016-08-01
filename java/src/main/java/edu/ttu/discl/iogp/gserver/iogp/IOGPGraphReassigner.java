@@ -25,12 +25,12 @@ public class IOGPGraphReassigner {
 	class CollectEdgeCountersCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.fennel_call> {
 		ByteBuffer src;
 		int finished;
-		Boolean jump;
+		JMP jmp;
 
-		public CollectEdgeCountersCallback(ByteBuffer s, int f, Boolean j) {
+		public CollectEdgeCountersCallback(ByteBuffer s, int f, JMP j) {
 			src = s;
 			finished = f;
-			jump = j;
+			jmp = j;
 		}
 
 		@Override
@@ -41,8 +41,9 @@ public class IOGPGraphReassigner {
 				final Condition broadcast_finish = broadcast_finishes.get(src);
 				fennel_score[finished] = t.getResult();
 				if (broadcast.decrementAndGet() == 0) {
+					System.out.println("single");
 					broadcast_finish.signal();
-					jump = true;
+					jmp.v = true;
 				}
 			} catch (TException e) {
 				e.printStackTrace();
@@ -72,6 +73,8 @@ public class IOGPGraphReassigner {
 		for (int i = 0; i < inst.serverNum; i++) fennel_score[i] = 0;
 	}
 
+	class JMP { public boolean v; }
+
 	public void reassignVertex(ByteBuffer src) throws InterruptedException {
 
 		/**
@@ -79,7 +82,9 @@ public class IOGPGraphReassigner {
 		 */
 		byte[] bsrc = NIOHelper.getActiveArray(src);
 
-		Boolean jump = false;
+		JMP jmp = new JMP();
+		jmp.v = false;
+
 		broadcasts.putIfAbsent(src, new AtomicInteger(inst.serverNum));
 		AtomicInteger broadcast = broadcasts.get(src);
 		broadcast_finishes.putIfAbsent(src, lock.newCondition());
@@ -91,13 +96,13 @@ public class IOGPGraphReassigner {
 			TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
 			try {
 				if (i != inst.getLocalIdx()) {
-					aclient.fennel(src, new CollectEdgeCountersCallback(src, i, jump));
+					aclient.fennel(src, new CollectEdgeCountersCallback(src, i, jmp));
 				} else {
 					lock.lock();
 					try {
 						fennel_score[i] = (0 - inst.size.get());
 						if (broadcast.decrementAndGet() == 0) {
-							jump = true;
+							jmp.v = true;
 						}
 					} finally {
 						lock.unlock();
@@ -108,14 +113,14 @@ public class IOGPGraphReassigner {
 			}
 		}
 
-		if (!jump) {
-			lock.lock();
-			try {
+		lock.lock();
+		try {
+			if (!jmp.v)
 				broadcast_finish.await();
-			} finally {
-				lock.unlock();
-			}
+		} finally {
+			lock.unlock();
 		}
+
 
 		GLogger.info("[%d] Get Fennel Score From %d Servers Cost: %d",
 				inst.getLocalIdx(), inst.serverNum, System.currentTimeMillis() - start);
