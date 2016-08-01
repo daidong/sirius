@@ -35,13 +35,13 @@ public class IOGPGraphReassigner {
 
 		@Override
 		public void onComplete(TGraphFSServer.AsyncClient.fennel_call t) {
+			AtomicInteger broadcast = broadcasts.get(src);
+			final Condition broadcast_finish = broadcast_finishes.get(src);
+
 			lock.lock();
 			try {
-				AtomicInteger broadcast = broadcasts.get(src);
-				final Condition broadcast_finish = broadcast_finishes.get(src);
 				fennel_score[finished] = t.getResult();
 				if (broadcast.decrementAndGet() == 0) {
-					System.out.println("single");
 					broadcast_finish.signal();
 					jmp.v = true;
 				}
