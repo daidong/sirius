@@ -282,7 +282,7 @@ public class ClientMain {
                     client.insert(dst, EdgeType.IN, src, val);
                     line_num += 2;
 
-                    if (line_num % 1000 == 1)
+                    if (line_num % 1000 == 2)
                         GLogger.info("insert %d cost %d",
                                 line_num, (System.currentTimeMillis() - start));
 
