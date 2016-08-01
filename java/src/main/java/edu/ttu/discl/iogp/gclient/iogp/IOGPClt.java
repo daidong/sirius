@@ -27,6 +27,7 @@ public class IOGPClt extends GraphClt {
 
     HashMap<ByteBuffer, Integer> cachedLocationInfo = new HashMap<>();
     HashMap<ByteBuffer, Integer> cachedSplitInfo = new HashMap<>();
+    int reassign_times = 0;
 
     public IOGPClt(int port, ArrayList<String> alls) {
         super(port, alls);
@@ -116,6 +117,8 @@ public class IOGPClt extends GraphClt {
                     target = getHashLocation(srcVertex, this.serverNum);
                 else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == false) {
                     split = true;
+                    reassign_times++;
+                    System.out.println("reassign: " + reassign_times);
                     cachedSplitInfo.put(ByteBuffer.wrap(srcVertex), 1);
                     target = getLocationFromCache(dstKey);
                 } else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true) {
