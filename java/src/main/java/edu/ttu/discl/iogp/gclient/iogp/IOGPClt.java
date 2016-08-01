@@ -111,17 +111,20 @@ public class IOGPClt extends GraphClt {
                 int status = re.getStatus();
                 invaidLocationCache(srcVertex);
 
-                if (status == Constants.RE_ACTUAL_LOC)
-                    target = re.getTarget();
-                else if (status == Constants.RE_VERTEX_WRONG_SRV)
-                    target = getHashLocation(srcVertex, this.serverNum);
-                else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == false) {
-                    split = true;
+                if (status == Constants.RE_ACTUAL_LOC) {
                     reassign_times++;
                     System.out.println("reassign: " + reassign_times);
+                    target = re.getTarget();
+                }
+                else if (status == Constants.RE_VERTEX_WRONG_SRV) {
+                    target = getHashLocation(srcVertex, this.serverNum);
+                }
+                else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == false) {
+                    split = true;
                     cachedSplitInfo.put(ByteBuffer.wrap(srcVertex), 1);
                     target = getLocationFromCache(dstKey);
-                } else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true) {
+                }
+                else if (status == Constants.EDGE_SPLIT_WRONG_SRV && split == true) {
                     target = getHashLocation(dstKey, this.serverNum);
                     cachedSplitInfo.put(ByteBuffer.wrap(srcVertex), 1);
                 }
