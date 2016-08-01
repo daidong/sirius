@@ -30,14 +30,14 @@ public class IOGPGraphReassigner {
 
 		@Override
 		public void onComplete(TGraphFSServer.AsyncClient.fennel_call t) {
-			AtomicInteger broadcast = broadcasts.get(src);
-			final Condition broadcast_finish = broadcast_finishes.get(src);
-
-			//GLogger.info("[%d] In Fennel Callback broadcast for %s, broadcast: %d",
-			//		inst.getLocalIdx(), new String(NIOHelper.getActiveArray(src)), broadcast.get());
-
 			lock.lock();
 			try {
+				AtomicInteger broadcast = broadcasts.get(src);
+				final Condition broadcast_finish = broadcast_finishes.get(src);
+
+				GLogger.info("[%d] In Fennel Callback broadcast for %s, broadcast: %d",
+						inst.getLocalIdx(), new String(NIOHelper.getActiveArray(src)), broadcast.get());
+
 				fennel_score[finished] = t.getResult();
 				if (broadcast.decrementAndGet() == 0) {
 					broadcast_finish.signal();

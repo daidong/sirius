@@ -292,7 +292,7 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public synchronized List<KeyValue> force_scan(ByteBuffer src, int type) throws TException{
-        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "force_scan");
+        GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "force_scan");
 
         byte[] bsrc = NIOHelper.getActiveArray(src);
 
@@ -304,7 +304,7 @@ public class IOGPHandler extends BaseHandler {
         ArrayList<KeyValue> kvs = inst.localstore.scanKV(startKey.toKey(), endKey.toKey());
         rtn.addAll(kvs);
 
-        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "force_scan");
+        GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "force_scan");
         return rtn;
     }
 
@@ -372,7 +372,7 @@ public class IOGPHandler extends BaseHandler {
 
     @Override
     public int batch_insert(List<KeyValue> batches, int type) throws TException {
-        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "batch_insert");
+        GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "batch_insert");
         if (type == 0) { //Split phase uses this
             RedirectException re = new RedirectException();
             List<Movement> mvs = new ArrayList<>();
@@ -395,10 +395,10 @@ public class IOGPHandler extends BaseHandler {
             }
             if (!mvs.isEmpty()) {
                 re.setRe(mvs);
-                GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
+                GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
                 throw re;
             }
-            GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
+            GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
             return 0;
         }
         if (type == 1){  //Vertex Reassign uses this
@@ -420,22 +420,22 @@ public class IOGPHandler extends BaseHandler {
                 }
             }
         }
-        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
+        GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "batch_insert");
         return 0;
     }
 
     @Override
     public int split(ByteBuffer src) throws TException{
-        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "split");
+        GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "split");
         inst.edgecounters.remove(src);
         inst.split.put(src, 1);
-        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "split");
+        GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "split");
         return 0;
     }
 
     @Override
     public int reassign(ByteBuffer src, int type, int target) throws RedirectException, TException {
-        GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "reassign");
+        GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "reassign");
         if (type == 0){ //update hash-loc
             inst.loc.put(src, target);
         } else {
@@ -447,7 +447,7 @@ public class IOGPHandler extends BaseHandler {
             c.reassign_times = type;
             inst.loc.put(src, target);
         }
-        GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "reassign");
+        GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "reassign");
 
         return 0;
     }
