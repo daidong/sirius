@@ -244,7 +244,18 @@ public class SNAPMain {
 
             for (int thrs = 1; thrs < 52; thrs+=5) {
                 //System.out.println("-----------------------------------------");
-                System.out.print("Thres: " + thrs + ": ");
+		
+		int reassinged = 0;
+                TIntObjectIterator<TIntHashSet> iterator = csr.iterator();
+                while (iterator.hasNext()) {
+                    iterator.advance();
+                    int key = iterator.key();
+                    TIntHashSet value = iterator.value();
+                    double k = (double ) value.size() / (double) thrs;
+                    reassinged += Math.max((int)(Math.log(k)/Math.log(2)), 0);
+                }
+                System.out.println("threshold: " + thrs + " reassign: " + reassinged + " :");
+
                 ThreePhase.workload_run_threshold(set, thrs);
                 //System.out.println("\n\n\n\n");
             }
