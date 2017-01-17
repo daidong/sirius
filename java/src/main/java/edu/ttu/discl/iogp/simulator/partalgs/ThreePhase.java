@@ -134,11 +134,15 @@ public class ThreePhase {
 				reassigntimes += 1;
 
 				//update local neighbors
-				for (int vtmp : cluster.get(from).pointed_to_me.get(src)){
-					cluster.get(from).local_neighbors.get(vtmp).decrementAndGet();
+				if (cluster.get(from).pointed_to_me.containsKey(src)) {
+					for (int vtmp : cluster.get(from).pointed_to_me.get(src)) {
+						cluster.get(from).local_neighbors.get(vtmp).decrementAndGet();
+					}
 				}
-				for (int vtmp : cluster.get(max_server).pointed_to_me.get(src)){
-					cluster.get(max_server).local_neighbors.get(vtmp).incrementAndGet();
+				if (cluster.get(max_server).pointed_to_me.containsKey(src)) {
+					for (int vtmp : cluster.get(max_server).pointed_to_me.get(src)) {
+						cluster.get(max_server).local_neighbors.get(vtmp).incrementAndGet();
+					}
 				}
 				//System.out.println("Reassign Vertex: " + src + " from " + from + " to " + max_server);
 				return (-1 - max_server);
