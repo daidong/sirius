@@ -64,7 +64,10 @@ public class ThreePhase {
 
 		int hash_dst = hash(dst);
 		int dst_srv = cluster.get(hash_dst).loc.get(dst);
+		if (!cluster.get(dst_srv).local_neighbors.containsKey(src))
+			cluster.get(dst_srv).local_neighbors.put(src, new AtomicInteger(0));
 		cluster.get(dst_srv).local_neighbors.get(src).incrementAndGet();
+
 		if (!this.pointed_to_me.containsKey(dst))
 			this.pointed_to_me.put(dst, new HashSet<Integer>());
 		this.pointed_to_me.get(dst).add(src);
