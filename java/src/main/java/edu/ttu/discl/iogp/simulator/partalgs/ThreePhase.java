@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by daidong on 5/30/16.
@@ -20,6 +21,8 @@ public class ThreePhase {
 	public HashMap<Integer, Integer> ra = new HashMap<>();
 
 	public HashMap<Integer, HashSet<Edge>> v = new HashMap<>();
+	public HashMap<Integer, AtomicInteger> local_neighbors;
+	public HashMap<Integer, HashSet<Integer>> pointed_to_me;
 
 	public ArrayList<ThreePhase> cluster;
 
@@ -31,6 +34,9 @@ public class ThreePhase {
 		this.cluster = cluster;
 		this.index = index;
 		this.serverNumber = num;
+
+		this.local_neighbors = new HashMap<>();
+		this.pointed_to_me = new HashMap<>();
 	}
 
 	public int hash(int vid){
@@ -40,6 +46,8 @@ public class ThreePhase {
 	//insertV is always correct for the first time
 	public void insertV(int vid){
 		this.v.put(vid, new HashSet<Edge>());
+		this.local_neighbors.put(vid, new AtomicInteger(0));
+		this.pointed_to_me.put(vid, new HashSet<Integer>());
 
 		this.ra.put(vid, 1);
 		this.loc.put(vid, index);
@@ -53,6 +61,13 @@ public class ThreePhase {
 	public int insertE(int src, int dst){
 		Edge newEdge = new Edge(src, dst);
 		int hash_src = hash(src);
+
+		int hash_dst = hash(dst);
+		int dst_srv = cluster.get(hash_dst).loc.get(dst);
+		cluster.get(dst_srv).local_neighbors.get(src).incrementAndGet();
+		if (!this.pointed_to_me.containsKey(dst))
+			this.pointed_to_me.put(dst, new HashSet<Integer>());
+		this.pointed_to_me.get(dst).add(src);
 
 		// vertex has been split,
 		if (cluster.get(hash_src).split.get(src) == true){
@@ -88,13 +103,15 @@ public class ThreePhase {
 			//fennel actually check the (total_size - connected size)
 			for (ThreePhase part : cluster) {
 				int local_fennel = 0;
+				/*
 				Set<Integer> vertices = part.v.keySet();
 				Set<Integer> set1 = new HashSet<>();
 
 				for (Edge temp : neighbors)
 					if (vertices.contains(temp.dst))
 						set1.add(temp.dst);
-				local_fennel = part.v.size() - set1.size();
+				*/
+				local_fennel = part.v.size() - part.local_neighbors.get(src).get();
 
 				if (local_fennel < fennel_score) {
 					max_server = part.index;
@@ -109,6 +126,14 @@ public class ThreePhase {
 				cluster.get(hash_src).loc.put(src, max_server);
 				cluster.get(max_server).v.put(src, mov_edges);
 				reassigntimes += 1;
+
+				//update local neighbors
+				for (int vtmp : cluster.get(from).pointed_to_me.get(src)){
+					cluster.get(from).local_neighbors.get(vtmp).decrementAndGet();
+				}
+				for (int vtmp : cluster.get(max_server).pointed_to_me.get(src)){
+					cluster.get(max_server).local_neighbors.get(vtmp).incrementAndGet();
+				}
 				//System.out.println("Reassign Vertex: " + src + " from " + from + " to " + max_server);
 				return (-1 - max_server);
 			}
@@ -232,8 +257,28 @@ public class ThreePhase {
 		for (ThreePhase t : cluster)
 			another_total_reassign += t.reassigntimes;
 
+		int[] memory = new int[32];
+		for (int i = 0; i < 32; i++) memory[i] = 0;
+
+		for (int vsrc : insertedV){
+			int src_tmp = vsrc % cluster_size;
+			int vsrc_loc = cluster.get(src_tmp).loc.get(vsrc);
+			memory[vsrc_loc] += 2;
+			for (Edge e_tmp : cluster.get(vsrc_loc).v.get(vsrc)){
+				int dst_tmp = e_tmp.dst;
+				int hash_dsttmp = dst_tmp % cluster_size;
+				int vdst_loc = cluster.get(hash_dsttmp).loc.get(dst_tmp);
+				memory[vdst_loc] += 2;
+			}
+		}
+
+		int max = 0;
+		for (int i = 0; i < 32; i++)
+			if (memory[i] > max) max = memory[i];
+
 		System.out.println("Total Cuts: " + total_cut + " Reassign: " + total_reassign + " Another reassign: " +
 				another_total_reassign +
-				" Percent: " + (float) total_cut / (float) edges.size());
+				" Percent: " + (float) total_cut / (float) edges.size() +
+				" Memory: " + max);
 	}
 }

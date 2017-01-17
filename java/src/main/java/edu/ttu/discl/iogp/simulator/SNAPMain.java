@@ -276,8 +276,5 @@ public class SNAPMain {
             }
         }
 
-        if ("memory".equalsIgnoreCase(op)){
-
-        }
     }
 }
