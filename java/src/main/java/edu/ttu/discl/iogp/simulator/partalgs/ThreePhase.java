@@ -114,7 +114,10 @@ public class ThreePhase {
 					if (vertices.contains(temp.dst))
 						set1.add(temp.dst);
 				*/
-				local_fennel = part.v.size() - part.local_neighbors.get(src).get();
+				int neigh_factor = 0;
+				if (part.local_neighbors.containsKey(src))
+					neigh_factor = part.local_neighbors.get(src).get();
+				local_fennel = part.v.size() - neigh_factor;
 
 				if (local_fennel < fennel_score) {
 					max_server = part.index;
