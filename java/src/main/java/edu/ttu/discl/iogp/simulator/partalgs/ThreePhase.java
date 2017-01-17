@@ -136,11 +136,15 @@ public class ThreePhase {
 				//update local neighbors
 				if (cluster.get(from).pointed_to_me.containsKey(src)) {
 					for (int vtmp : cluster.get(from).pointed_to_me.get(src)) {
+						if (!cluster.get(from).local_neighbors.containsKey(vtmp))
+							cluster.get(from).local_neighbors.put(vtmp, new AtomicInteger(0));
 						cluster.get(from).local_neighbors.get(vtmp).decrementAndGet();
 					}
 				}
 				if (cluster.get(max_server).pointed_to_me.containsKey(src)) {
 					for (int vtmp : cluster.get(max_server).pointed_to_me.get(src)) {
+						if (!cluster.get(max_server).local_neighbors.containsKey(vtmp))
+							cluster.get(max_server).local_neighbors.put(vtmp, new AtomicInteger(0));
 						cluster.get(max_server).local_neighbors.get(vtmp).incrementAndGet();
 					}
 				}
