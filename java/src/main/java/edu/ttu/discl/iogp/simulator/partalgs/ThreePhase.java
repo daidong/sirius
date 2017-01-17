@@ -242,7 +242,7 @@ public class ThreePhase {
 			}
 
 
-			if (visitedEdges.size() % 10000000 == 1 && visitedEdges.size() != 1) {
+			if (visitedEdges.size() % 100000 == 1 && visitedEdges.size() != 1) {
 				total_cut = 0;
 				for (Edge eval : visitedEdges) {
 					int src = eval.src;
