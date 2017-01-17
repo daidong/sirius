@@ -25,6 +25,7 @@ public class ThreePhase {
 
 	public int serverNumber;
 	public int index;
+	public int reassigntimes = 0;
 
 	public ThreePhase(int index, ArrayList<ThreePhase> cluster, int num){
 		this.cluster = cluster;
@@ -107,6 +108,7 @@ public class ThreePhase {
 
 				cluster.get(hash_src).loc.put(src, max_server);
 				cluster.get(max_server).v.put(src, mov_edges);
+				reassigntimes += 1;
 				//System.out.println("Reassign Vertex: " + src + " from " + from + " to " + max_server);
 				return (-1 - max_server);
 			}
@@ -226,7 +228,12 @@ public class ThreePhase {
 					cluster.get(dst % cluster_size).loc.get(dst))
 				total_cut++;
 		}
-		System.out.println("Total Cuts: " + total_cut + " Reassign: " + total_reassign +
+		int another_total_reassign = 0;
+		for (ThreePhase t : cluster)
+			another_total_reassign += t.reassigntimes;
+
+		System.out.println("Total Cuts: " + total_cut + " Reassign: " + total_reassign + " Another reassign: " +
+				another_total_reassign +
 				" Percent: " + (float) total_cut / (float) edges.size());
 	}
 }

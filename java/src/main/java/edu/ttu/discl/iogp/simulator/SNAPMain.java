@@ -245,7 +245,7 @@ public class SNAPMain {
             for (int thrs = 1; thrs < 52; thrs+=5) {
                 //System.out.println("-----------------------------------------");
 		
-		int reassinged = 0;
+		        int reassinged = 0;
                 TIntObjectIterator<TIntHashSet> iterator = csr.iterator();
                 while (iterator.hasNext()) {
                     iterator.advance();
@@ -274,6 +274,10 @@ public class SNAPMain {
                 }
                 System.out.println("threshold: " + threshold + " reassign: " + reassinged);
             }
+        }
+
+        if ("memory".equalsIgnoreCase(op)){
+
         }
     }
 }
