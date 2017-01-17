@@ -35,6 +35,7 @@ public class IOGPHandler extends BaseHandler {
 
         inst.edgecounters.putIfAbsent(src, new Counters());
         Counters c = inst.edgecounters.get(src);
+        c.actual_exist = 1;
 
         synchronized (c) {
 			/**
@@ -103,6 +104,8 @@ public class IOGPHandler extends BaseHandler {
                         inst.edgecounters.get(src).plo += 1;
                         inst.edgecounters.get(dst).pli += 1;
                     }
+                    inst.edgecounters.get(src).actual_exist = 1;
+                    inst.edgecounters.get(dst).actual_exist = 1;
 
                     /**
                      * Check whether we need to reassign or split the vertex
@@ -177,6 +180,10 @@ public class IOGPHandler extends BaseHandler {
 
             }
         }
+        int mf = 0;
+        for (Counters ctmp : inst.edgecounters.values())
+            if (ctmp.actual_exist == 1) mf += 1;
+        GLogger.info("real memory footprint: " + mf + " expected: " + inst.edgecounters.size());
         //GLogger.info("[%d]-[END]-[%s]", inst.getLocalIdx(), "insert");
         return 0;
     }
