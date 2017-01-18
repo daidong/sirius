@@ -276,5 +276,22 @@ public class SNAPMain {
             }
         }
 
+        if ("dist".equalsIgnoreCase(op)){
+            for (int threshold = 1; threshold <= 51; threshold += 5) {
+
+                int vertex_number = 0;
+                TIntObjectIterator<TIntHashSet> iterator = csr.iterator();
+                while (iterator.hasNext()) {
+                    iterator.advance();
+                    int key = iterator.key();
+                    TIntHashSet value = iterator.value();
+                    if (value.size() >= threshold)
+                        vertex_number += 1;
+                }
+
+                System.out.println("threshold: " + threshold + " over: " + vertex_number);
+            }
+        }
+
     }
 }
