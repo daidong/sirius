@@ -4,12 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>edu.ttu.discl.iogp</groupId>
-    <artifactId>iogp</artifactId>
+    <groupId>edu.dair.sgdb</groupId>
+    <artifactId>sgdb</artifactId>
     <version>0.1</version>
 
     <description>
-        IOGP Simple Graph Database Implementation
+        Simple Graph Database Implementation
     </description>
 
     <dependencies>
@@ -424,7 +424,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>edu.ttu.discl.iogp.gserver.ServerMain</mainClass>
+                            <mainClass>edu.dair.sgdb.gserver.ServerMain</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

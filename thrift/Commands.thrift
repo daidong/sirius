@@ -1,4 +1,4 @@
-namespace java edu.ttu.discl.iogp.thrift
+namespace java edu.dair.sgdb.thrift
 
 struct KeyValue {
   1: binary key,

@@ -27,7 +27,7 @@ mkdir -p $LOG_PATH
 touch $LOG_PATH/stdout.log
 
 #
-CLASS_NAME=edu.ttu.discl.iogp.gserver.ServerMain
+CLASS_NAME=ServerMain
 CLASS_PATH=$PROCESSOR_HOME/conf
 #
 for f in $LIB_PATH/*.jar

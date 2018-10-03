@@ -12,7 +12,7 @@ JAVA_SRC_HOME=$(CUR_DIR)/java
 
 THRFT_SCHM=$(CUR_DIR)/thrift
 THRFT_JAVA_NS=$(JAVA_SRC_HOME)/src/main/java
-THRFT_JAVA_PATH=$(THRFT_JAVA_NS)/edu/ttu/discl/iogp/thrift
+THRFT_JAVA_PATH=$(THRFT_JAVA_NS)/edu/dair/sgdb/thrift
 
 .PHONY: print_info
 print_info:
