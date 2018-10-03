@@ -7,7 +7,7 @@ import java.util.Arrays;
 public class DBKey {
 
     /**
-     * |src|type|dst|ts|
+     * |src|type|dst|
      */
     public byte[] src;
     public int type;

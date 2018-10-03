@@ -83,7 +83,7 @@ public abstract class GraphClt {
 
     abstract public List<ByteBuffer> bfs(byte[] srcVertex, EdgeType edgeType, int max_steps) throws TException;
 
-    abstract public int syncstatus() throws TException;
+    abstract public int sync() throws TException;
 
     public int submitTravel(List<SingleStep> travelPlan) throws TException {
         long ts = System.currentTimeMillis();

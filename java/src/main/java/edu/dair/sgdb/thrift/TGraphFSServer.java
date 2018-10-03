@@ -353,20 +353,20 @@ public class TGraphFSServer {
     {
       syncstatus_args args = new syncstatus_args();
       args.setStatuses(statuses);
-      sendBase("syncstatus", args);
+      sendBase("sync", args);
     }
 
     public int recv_syncstatus() throws RedirectException, org.apache.thrift.TException
     {
       syncstatus_result result = new syncstatus_result();
-      receiveBase(result, "syncstatus");
+      receiveBase(result, "sync");
       if (result.isSetSuccess()) {
         return result.success;
       }
       if (result.r != null) {
         throw result.r;
       }
-      throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "syncstatus failed: unknown result");
+      throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "sync failed: unknown result");
     }
 
     public int syncTravel(TravelCommand tc) throws org.apache.thrift.TException
@@ -878,7 +878,7 @@ public class TGraphFSServer {
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
-        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("syncstatus", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("sync", org.apache.thrift.protocol.TMessageType.CALL, 0));
         syncstatus_args args = new syncstatus_args();
         args.setStatuses(statuses);
         args.write(prot);
@@ -1141,7 +1141,7 @@ public class TGraphFSServer {
       processMap.put("split", new split());
       processMap.put("reassign", new reassign());
       processMap.put("fennel", new fennel());
-      processMap.put("syncstatus", new syncstatus());
+      processMap.put("sync", new syncstatus());
       processMap.put("syncTravel", new syncTravel());
       processMap.put("syncTravelMaster", new syncTravelMaster());
       processMap.put("syncTravelRtn", new syncTravelRtn());
@@ -1412,7 +1412,7 @@ public class TGraphFSServer {
 
     public static class syncstatus<I extends Iface> extends org.apache.thrift.ProcessFunction<I, syncstatus_args> {
       public syncstatus() {
-        super("syncstatus");
+        super("sync");
       }
 
       public syncstatus_args getEmptyArgsInstance() {
@@ -1644,7 +1644,7 @@ public class TGraphFSServer {
       processMap.put("split", new split());
       processMap.put("reassign", new reassign());
       processMap.put("fennel", new fennel());
-      processMap.put("syncstatus", new syncstatus());
+      processMap.put("sync", new syncstatus());
       processMap.put("syncTravel", new syncTravel());
       processMap.put("syncTravelMaster", new syncTravelMaster());
       processMap.put("syncTravelRtn", new syncTravelRtn());
@@ -2239,7 +2239,7 @@ public class TGraphFSServer {
 
     public static class syncstatus<I extends AsyncIface> extends org.apache.thrift.AsyncProcessFunction<I, syncstatus_args, java.lang.Integer> {
       public syncstatus() {
-        super("syncstatus");
+        super("sync");
       }
 
       public syncstatus_args getEmptyArgsInstance() {

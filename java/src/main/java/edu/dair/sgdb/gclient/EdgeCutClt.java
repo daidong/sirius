@@ -1,9 +1,8 @@
-package edu.dair.sgdb.gclient.edgecut;
+package edu.dair.sgdb.gclient;
 
 import edu.dair.sgdb.gserver.EdgeType;
 import edu.dair.sgdb.sengine.DBKey;
 import edu.dair.sgdb.tengine.travel.GTravel;
-import edu.dair.sgdb.gclient.GraphClt;
 import edu.dair.sgdb.thrift.KeyValue;
 import edu.dair.sgdb.utils.ArrayPrimitives;
 import edu.dair.sgdb.utils.NIOHelper;
@@ -30,31 +29,18 @@ public class EdgeCutClt extends GraphClt {
     }
 
     public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey) throws TException {
-        long ts = System.currentTimeMillis();
-        return read(srcVertex, edgeType, dstKey, ts);
-    }
-
-    public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, long ts) throws TException {
         int dstServer = getHashLocation(srcVertex, this.serverNum);
-        List<KeyValue> r = getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get());
-        return r;
+        return getClientConn(dstServer).read(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get());
     }
 
     public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value) throws TException {
-        long ts = System.currentTimeMillis();
-        return insert(srcVertex, edgeType, dstKey, value, ts);
-    }
-
-    public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value, long ts) throws TException {
         int dstServer = getHashLocation(srcVertex, this.serverNum);
-        int r = getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ByteBuffer.wrap(value));
-        return r;
+        return getClientConn(dstServer).insert(ByteBuffer.wrap(srcVertex), ByteBuffer.wrap(dstKey), edgeType.get(), ByteBuffer.wrap(value));
     }
 
     public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType) throws TException {
         int dstServer = getHashLocation(srcVertex, this.serverNum);
-        List<KeyValue> r = getClientConn(dstServer).scan(ByteBuffer.wrap(srcVertex), edgeType.get());
-        return r;
+        return getClientConn(dstServer).scan(ByteBuffer.wrap(srcVertex), edgeType.get());
     }
 
     private class BfsEntry {
@@ -98,7 +84,7 @@ public class EdgeCutClt extends GraphClt {
     }
 
     @Override
-    public int syncstatus() throws TException {
+    public int sync() throws TException {
         return 0;
     }
 

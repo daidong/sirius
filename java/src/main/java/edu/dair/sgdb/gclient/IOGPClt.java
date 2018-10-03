@@ -1,8 +1,7 @@
-package edu.dair.sgdb.gclient.iogp;
+package edu.dair.sgdb.gclient;
 
 import edu.dair.sgdb.gserver.EdgeType;
 import edu.dair.sgdb.tengine.travel.GTravel;
-import edu.dair.sgdb.gclient.GraphClt;
 import edu.dair.sgdb.thrift.KeyValue;
 import edu.dair.sgdb.thrift.RedirectException;
 import edu.dair.sgdb.thrift.Status;
@@ -135,7 +134,7 @@ public class IOGPClt extends GraphClt {
         return Constants.RTN_SUCC;
     }
 
-    public int syncstatus() throws TException {
+    public int sync() throws TException {
 
         ArrayList<Status> statuses = new ArrayList<>();
         HashSet<ByteBuffer> touchedVertices = new HashSet<>();

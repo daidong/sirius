@@ -1,7 +1,5 @@
 package edu.dair.sgdb.gclient;
 
-import edu.dair.sgdb.gclient.edgecut.EdgeCutClt;
-import edu.dair.sgdb.gclient.iogp.IOGPClt;
 import edu.dair.sgdb.gserver.EdgeType;
 import edu.dair.sgdb.tengine.travel.GTravel;
 import edu.dair.sgdb.thrift.KeyValue;
@@ -291,7 +289,7 @@ public class ClientMain {
                     e.printStackTrace();
                 }
 
-                client.syncstatus();
+                client.sync();
 
                 System.out.println("Start Travel " + id);
 
