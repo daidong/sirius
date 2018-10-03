@@ -162,7 +162,8 @@ public class SyncTravelVertexWorker implements Runnable {
                             instance.getLocalIdx(), s, System.nanoTime());
 
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
-                    aclient.syncTravel(tc1, new BroadCastTVCallback(s));
+                    AsyncMethodCallback amcb = new BroadCastTVCallback(s);
+                    aclient.syncTravel(tc1, amcb);
                     /*
                     TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConn(s);
                     synchronized (aclient) {

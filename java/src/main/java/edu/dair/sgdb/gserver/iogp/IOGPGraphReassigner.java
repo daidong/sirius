@@ -98,7 +98,8 @@ public class IOGPGraphReassigner {
             TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
             try {
                 if (i != inst.getLocalIdx()) {
-                    aclient.fennel(src, new CollectEdgeCountersCallback(src, i, jmp));
+                    AsyncMethodCallback amcb = new CollectEdgeCountersCallback(src, i, jmp);
+                    aclient.fennel(src, amcb);
                 } else {
                     lock.lock();
                     try {

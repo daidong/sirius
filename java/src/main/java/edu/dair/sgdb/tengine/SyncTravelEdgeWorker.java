@@ -159,7 +159,8 @@ public class SyncTravelEdgeWorker implements Runnable {
                 }
 
                 TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
-                aclient.syncTravel(tc2, new EdgeBroadCastTVCallback(s));
+                AsyncMethodCallback amcb = new EdgeBroadCastTVCallback(s);
+                aclient.syncTravel(tc2, amcb);
 
                 /*
                 AsyncClient aclient = inst.getAsyncClientConn(s);

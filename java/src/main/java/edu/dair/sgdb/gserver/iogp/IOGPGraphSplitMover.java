@@ -95,8 +95,10 @@ public class IOGPGraphSplitMover {
         for (int i = 0; i < inst.serverNum; i++) {
             TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
             try {
-                if (i != inst.getLocalIdx())
-                    aclient.split(src, new SplitBroadCastCallback(src, i));
+                if (i != inst.getLocalIdx()) {
+                    AsyncMethodCallback amcb = new SplitBroadCastCallback(src, i);
+                    aclient.split(src, amcb);
+                }
                 else {
                     inst.handler.split(src);
                     if (broadcast.decrementAndGet() == 0) {

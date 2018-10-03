@@ -5,7 +5,7 @@ import edu.dair.sgdb.tengine.SyncTravelEngine;
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.gserver.EdgeType;
 import edu.dair.sgdb.thrift.*;
-import edu.ttu.discl.iogp.thrift.*;
+import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.Constants;
 import edu.dair.sgdb.utils.GLogger;
 import edu.dair.sgdb.utils.NIOHelper;

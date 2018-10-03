@@ -534,7 +534,8 @@ public class SyncTravelEngine {
                             instance.getLocalIdx(), s, System.nanoTime(), stepId + 1);
 
                     TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
-                    aclient.syncTravelStart(tc1, new SendTraverlStartCallback(s));
+                    AsyncMethodCallback amcb = new SendTraverlStartCallback(s);
+                    aclient.syncTravelStart(tc1, amcb);
 
                 /*
                 TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConn(s);

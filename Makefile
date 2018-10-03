@@ -52,7 +52,7 @@ install:
 		# cd $(CPP_SRC_HOME) && make all;
 		# Build Java Projects
 		cd $(JAVA_SRC_HOME) && mvn clean install;
-		mkdir -p release; mv java/target/*.tar.gz release/; cd release && tar zxf iogp-0.1-make-assembly.tar.gz;
+		mkdir -p release; mv java/target/*.tar.gz release/; cd release && tar zxf sgdb-0.1-make-assembly.tar.gz;
 
 #cd release && tar zxf main.tar.gz
 

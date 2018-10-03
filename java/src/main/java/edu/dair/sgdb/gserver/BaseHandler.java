@@ -2,7 +2,7 @@ package edu.dair.sgdb.gserver;
 
 import edu.dair.sgdb.tengine.SyncTravelEngine;
 import edu.dair.sgdb.thrift.*;
-import edu.ttu.discl.iogp.thrift.*;
+import edu.dair.sgdb.thrift.*;
 import org.apache.thrift.TException;
 
 import java.nio.ByteBuffer;

@@ -157,8 +157,8 @@ public class IOGPClt extends GraphClt {
         try {
             for (int i = 0; i < serverNum; i++) {
                 TGraphFSServer.AsyncClient aclient = getAsyncClientConn(i);
-                aclient.syncstatus(statuses,
-                        new SyncAllCallback(lock, broadcast_finish, total_broadcast));
+                AsyncMethodCallback amcb = new SyncAllCallback(lock, broadcast_finish, total_broadcast);
+                aclient.syncstatus(statuses, amcb);
             }
 
             lock.lock();
@@ -244,9 +244,10 @@ public class IOGPClt extends GraphClt {
             try {
                 for (int i = 0; i < serverNum; i++) {
                     TGraphFSServer.AsyncClient aclient = getAsyncClientConn(i);
+                    AsyncMethodCallback amcb = new ScanAllCallback(lock, broadcast_finish, total_broadcast, rtn);
                     aclient.force_scan(ByteBuffer.wrap(srcVertex),
                             edgeType.get(),
-                            new ScanAllCallback(lock, broadcast_finish, total_broadcast, rtn));
+                            amcb);
                 }
 
                 lock.lock();
