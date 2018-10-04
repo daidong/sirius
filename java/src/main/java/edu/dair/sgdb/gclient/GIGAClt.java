@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class GIGAClt extends GraphClt {
+public class GIGAClt extends AbstractClt {
     public HashMap<ByteBuffer, GigaIndex> gigaMaps;
 
     public GIGAClt(int port, ArrayList<String> alls) {

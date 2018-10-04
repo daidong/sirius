@@ -48,7 +48,7 @@ public class EdgeCutSrv extends AbstractSrv {
     @Override
     public Set<Integer> getEdgeLocs(byte[] src, int type) {
         Set<Integer> locs = new HashSet<>();
-        int startIdx = getHashLoc(src, this.serverNum);
+        int startIdx = getHashLocation(src, this.serverNum);
         locs.add(startIdx);
         return locs;
     }
@@ -56,7 +56,7 @@ public class EdgeCutSrv extends AbstractSrv {
     @Override
     public Set<Integer> getVertexLoc(byte[] src) {
         Set<Integer> locs = new HashSet<>();
-        int startIdx = getHashLoc(src, this.serverNum);
+        int startIdx = getHashLocation(src, this.serverNum);
         locs.add(startIdx);
         return locs;
     }

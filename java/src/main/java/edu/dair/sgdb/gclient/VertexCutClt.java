@@ -14,7 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class VertexCutClt extends GraphClt {
+public class VertexCutClt extends AbstractClt {
 
     private static final Logger logger = LoggerFactory.getLogger(VertexCutClt.class);
 

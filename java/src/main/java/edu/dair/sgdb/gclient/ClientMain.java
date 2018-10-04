@@ -142,7 +142,7 @@ public class ClientMain {
 
         String op = rst[1];
 
-        GraphClt client = null;
+        AbstractClt client = null;
 
         switch (type) {
             case "edgecut":

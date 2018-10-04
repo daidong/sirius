@@ -34,7 +34,7 @@ public class IOGPGraphSplitMover {
         }
     }
 
-    class SplitBroadCastCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.split_call> {
+    class SplitBroadCastCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.iogp_split_call> {
         int finished;
         ByteBuffer src;
 
@@ -44,7 +44,7 @@ public class IOGPGraphSplitMover {
         }
 
         @Override
-        public void onComplete(TGraphFSServer.AsyncClient.split_call t) {
+        public void onComplete(TGraphFSServer.AsyncClient.iogp_split_call t) {
             AtomicInteger broadcast = broadcasts.get(src);
             final Condition broadcast_finish = broadcast_finishes.get(src);
             lock.lock();
@@ -97,10 +97,10 @@ public class IOGPGraphSplitMover {
             try {
                 if (i != inst.getLocalIdx()) {
                     AsyncMethodCallback amcb = new SplitBroadCastCallback(src, i);
-                    aclient.split(src, amcb);
+                    aclient.iogp_split(src, amcb);
                 }
                 else {
-                    inst.handler.split(src);
+                    inst.handler.iogp_split(src);
                     if (broadcast.decrementAndGet() == 0) {
                         jump = true;
                     }
@@ -130,7 +130,7 @@ public class IOGPGraphSplitMover {
 
         for (KeyValue kv : kvs) {
             DBKey key = new DBKey(kv.getKey());
-            int hash_target = inst.getHashLoc(key.dst, inst.serverNum);
+            int hash_target = inst.getHashLocation(key.dst, inst.serverNum);
             if (!loadsOnEachServer.containsKey(hash_target))
                 loadsOnEachServer.put(hash_target, new ArrayList<KeyValue>());
             loadsOnEachServer.get(hash_target).add(kv);

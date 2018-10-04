@@ -42,13 +42,13 @@ public class IOGPHandler extends BaseHandler {
              * Initial Status. loc is empty and but current server is src's hash location
              */
             if (!inst.loc.containsKey(src) &&
-                    inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx()) {
+                    inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx()) {
                 inst.loc.put(src, inst.getLocalIdx());
                 inst.split.put(src, 0);
             }
 
             if (!inst.loc.containsKey(dst) &&
-                    inst.getHashLoc(bdst, inst.serverNum) == inst.getLocalIdx()) {
+                    inst.getHashLocation(bdst, inst.serverNum) == inst.getLocalIdx()) {
                 inst.loc.put(dst, inst.getLocalIdx());
                 inst.split.put(dst, 0);
             }
@@ -70,7 +70,7 @@ public class IOGPHandler extends BaseHandler {
                      * thrown exception and ask client to re-try
                      */
                     RedirectException re = new RedirectException();
-                    if (inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx()) {
+                    if (inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx()) {
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(src));
                     } else {
@@ -143,7 +143,7 @@ public class IOGPHandler extends BaseHandler {
                      * thrown exception and ask client to re-try
                      */
                     RedirectException re = new RedirectException();
-                    if (inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx()) {
+                    if (inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx()) {
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(src));
                     } else {
@@ -166,7 +166,7 @@ public class IOGPHandler extends BaseHandler {
                      */
                     RedirectException re = new RedirectException();
 
-                    if (inst.getHashLoc(bdst, inst.serverNum) == inst.getLocalIdx()) {
+                    if (inst.getHashLocation(bdst, inst.serverNum) == inst.getLocalIdx()) {
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(dst));
                     } else {
@@ -216,7 +216,7 @@ public class IOGPHandler extends BaseHandler {
              * Return empty list
              */
             if (!inst.loc.containsKey(src) &&
-                    inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx())
+                    inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx())
                 return rtn;
 
             /*
@@ -238,7 +238,7 @@ public class IOGPHandler extends BaseHandler {
                      * thrown exception and ask client to re-try
                      */
                     RedirectException re = new RedirectException();
-                    if (inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx()) {
+                    if (inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx()) {
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(src));
                         throw re;
@@ -268,7 +268,7 @@ public class IOGPHandler extends BaseHandler {
                      * thrown exception and ask client to re-try
                      */
                     RedirectException re = new RedirectException();
-                    if (inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx()) {
+                    if (inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx()) {
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(src));
                         throw re;
@@ -292,7 +292,7 @@ public class IOGPHandler extends BaseHandler {
                      * Throw exception and ask them to re-try
                      */
                     RedirectException re = new RedirectException();
-                    if (inst.getHashLoc(bdst, inst.serverNum) == inst.getLocalIdx()) {
+                    if (inst.getHashLocation(bdst, inst.serverNum) == inst.getLocalIdx()) {
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(dst));
                         throw re;
@@ -327,7 +327,7 @@ public class IOGPHandler extends BaseHandler {
              * Return empty list
              */
             if (!inst.loc.containsKey(src) &&
-                    inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx())
+                    inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx())
                 return rtn;
 
             if (type == EdgeType.STATIC_ATTR.get()
@@ -346,7 +346,7 @@ public class IOGPHandler extends BaseHandler {
 
                 } else {
                     RedirectException re = new RedirectException();
-                    if (inst.getHashLoc(bsrc, inst.serverNum) == inst.getLocalIdx()) {
+                    if (inst.getHashLocation(bsrc, inst.serverNum) == inst.getLocalIdx()) {
                         re.setStatus(Constants.RE_ACTUAL_LOC);
                         re.setTarget(inst.loc.get(src));
                         throw re;
@@ -403,7 +403,7 @@ public class IOGPHandler extends BaseHandler {
                     inst.size.getAndIncrement();
                 } else {
                     if (!inst.loc.containsKey(bdst) &&
-                            inst.getHashLoc(NIOHelper.getActiveArray(bdst),
+                            inst.getHashLocation(NIOHelper.getActiveArray(bdst),
                                     inst.serverNum) == inst.getLocalIdx())
 
                         inst.loc.put(bdst, inst.getLocalIdx());

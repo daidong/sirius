@@ -40,7 +40,7 @@ public class IOGPSrv extends AbstractSrv {
         if (syncedLocationInfo.containsKey(ByteBuffer.wrap(src)))
             return syncedLocationInfo.get(ByteBuffer.wrap(src));
         else
-            return getHashLoc(src, this.serverNum);
+            return getHashLocation(src, this.serverNum);
     }
 
     private int getSplitInfoFromSyncedInfo(byte[] src) {

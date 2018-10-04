@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class DIDOClt extends GraphClt {
+public class DIDOClt extends AbstractClt {
     public HashMap<ByteBuffer, DIDOIndex> gigaMaps;
 
     public DIDOClt(int port, ArrayList<String> alls) {
@@ -158,7 +158,7 @@ public class DIDOClt extends GraphClt {
             AsyncMethodCallback amcb = new ScanCallBack(gi, totalReqs, rtn);
             for (int server : reqSrvs) {
                 totalReqs.getAndIncrement();
-                getAsyncClientConn(server).giga_scan(ByteBuffer.wrap(srcVertex), edgeType.get(), amcb);
+                getAsyncClientConn(server).giga_scan(ByteBuffer.wrap(srcVertex), edgeType.get(), ByteBuffer.wrap(gi.bitmap), amcb);
             }
         }
     }

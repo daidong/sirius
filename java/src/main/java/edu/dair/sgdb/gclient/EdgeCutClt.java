@@ -20,7 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class EdgeCutClt extends GraphClt {
+public class EdgeCutClt extends AbstractClt {
 
     private static final Logger logger = LoggerFactory.getLogger(EdgeCutClt.class);
 

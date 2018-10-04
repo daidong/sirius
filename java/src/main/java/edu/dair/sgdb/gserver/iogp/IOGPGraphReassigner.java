@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class IOGPGraphReassigner {
 
-    class CollectEdgeCountersCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.fennel_call> {
+    class CollectEdgeCountersCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.iogp_fennel_call> {
         ByteBuffer src;
         int finished;
         JMP jmp;
@@ -34,7 +34,7 @@ public class IOGPGraphReassigner {
         }
 
         @Override
-        public void onComplete(TGraphFSServer.AsyncClient.fennel_call t) {
+        public void onComplete(TGraphFSServer.AsyncClient.iogp_fennel_call t) {
             AtomicInteger broadcast = broadcasts.get(src);
             final Condition broadcast_finish = broadcast_finishes.get(src);
 
@@ -99,7 +99,7 @@ public class IOGPGraphReassigner {
             try {
                 if (i != inst.getLocalIdx()) {
                     AsyncMethodCallback amcb = new CollectEdgeCountersCallback(src, i, jmp);
-                    aclient.fennel(src, amcb);
+                    aclient.iogp_fennel(src, amcb);
                 } else {
                     lock.lock();
                     try {
@@ -164,21 +164,21 @@ public class IOGPGraphReassigner {
             /**
              * The order is important. First setup target, then update the hash sorce
              */
-            int hash_loc = inst.getHashLoc(bsrc, inst.serverNum);
+            int hash_loc = inst.getHashLocation(bsrc, inst.serverNum);
             // to the target server, "type" is how many this vertex has been reassigned.
             if (c.reassign_times < 1) GLogger.error("c.reassign_times should never small than 1");
 
             TGraphFSServer.Client targetClient = inst.getClientConn(target);
             synchronized (targetClient) {
-                targetClient.reassign(src, c.reassign_times, target);
+                targetClient.iogp_reassign(src, c.reassign_times, target);
             }
 
             TGraphFSServer.Client hashClient = inst.getClientConn(hash_loc);
             synchronized (hashClient) {
                 if (hash_loc != inst.getLocalIdx())
-                    hashClient.reassign(src, 0, target);
+                    hashClient.iogp_reassign(src, 0, target);
                 else
-                    inst.handler.reassign(src, 0, target);
+                    inst.handler.iogp_reassign(src, 0, target);
             }
         } catch (TException e) {
             e.printStackTrace();

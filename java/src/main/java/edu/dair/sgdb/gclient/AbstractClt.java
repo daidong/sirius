@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class GraphClt {
+public abstract class AbstractClt {
 
     public TGraphFSServer.Client[] conns;
     public TGraphFSServer.AsyncClient[] asyncClients;
@@ -31,7 +31,7 @@ public abstract class GraphClt {
     public int port;
     public int serverNum;
 
-    public GraphClt(int port, ArrayList<String> alls) {
+    public AbstractClt(int port, ArrayList<String> alls) {
         this.allSrvs = alls;
         this.port = port;
         this.serverNum = allSrvs.size();

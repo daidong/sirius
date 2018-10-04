@@ -23,7 +23,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class IOGPClt extends GraphClt {
+public class IOGPClt extends AbstractClt {
 
     HashMap<ByteBuffer, Integer> cachedLocationInfo = new HashMap<>();
     HashMap<ByteBuffer, Integer> cachedSplitInfo = new HashMap<>();
@@ -157,7 +157,7 @@ public class IOGPClt extends GraphClt {
             for (int i = 0; i < serverNum; i++) {
                 TGraphFSServer.AsyncClient aclient = getAsyncClientConn(i);
                 AsyncMethodCallback amcb = new SyncAllCallback(lock, broadcast_finish, total_broadcast);
-                aclient.syncstatus(statuses, amcb);
+                aclient.iogp_syncstatus(statuses, amcb);
             }
 
             lock.lock();
@@ -173,7 +173,7 @@ public class IOGPClt extends GraphClt {
         return 0;
     }
 
-    class SyncAllCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncstatus_call> {
+    class SyncAllCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.iogp_syncstatus_call> {
 
         public Lock lock;
         public AtomicInteger total_broadcast;
@@ -186,7 +186,7 @@ public class IOGPClt extends GraphClt {
         }
 
         @Override
-        public void onComplete(TGraphFSServer.AsyncClient.syncstatus_call t) {
+        public void onComplete(TGraphFSServer.AsyncClient.iogp_syncstatus_call t) {
             lock.lock();
             try {
                 if (total_broadcast.decrementAndGet() == 0)
@@ -244,7 +244,7 @@ public class IOGPClt extends GraphClt {
                 for (int i = 0; i < serverNum; i++) {
                     TGraphFSServer.AsyncClient aclient = getAsyncClientConn(i);
                     AsyncMethodCallback amcb = new ScanAllCallback(lock, broadcast_finish, total_broadcast, rtn);
-                    aclient.force_scan(ByteBuffer.wrap(srcVertex),
+                    aclient.iogp_force_scan(ByteBuffer.wrap(srcVertex),
                             edgeType.get(),
                             amcb);
                 }
@@ -264,7 +264,7 @@ public class IOGPClt extends GraphClt {
         return new ArrayList<KeyValue>();
     }
 
-    class ScanAllCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.force_scan_call> {
+    class ScanAllCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.iogp_force_scan_call> {
 
         public Lock lock;
         public AtomicInteger total_broadcast;
@@ -279,7 +279,7 @@ public class IOGPClt extends GraphClt {
         }
 
         @Override
-        public void onComplete(TGraphFSServer.AsyncClient.force_scan_call t) {
+        public void onComplete(TGraphFSServer.AsyncClient.iogp_force_scan_call t) {
             lock.lock();
             try {
                 List<KeyValue> force_scan_rtn = t.getResult();
