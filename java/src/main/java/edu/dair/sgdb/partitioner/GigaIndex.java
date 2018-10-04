@@ -2,6 +2,7 @@ package edu.dair.sgdb.partitioner;
 
 import edu.dair.sgdb.utils.ArrayPrimitives;
 import edu.dair.sgdb.utils.Constants;
+import edu.dair.sgdb.utils.GLogger;
 
 import java.util.HashMap;
 import java.util.HashSet;
