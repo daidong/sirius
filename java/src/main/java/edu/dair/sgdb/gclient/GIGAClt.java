@@ -1,6 +1,5 @@
 package edu.dair.sgdb.gclient;
 
-import com.jcabi.immutable.Array;
 import edu.dair.sgdb.gserver.EdgeType;
 import edu.dair.sgdb.partitioner.GigaIndex;
 import edu.dair.sgdb.thrift.*;
@@ -11,13 +10,7 @@ import org.apache.thrift.async.AsyncMethodCallback;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class GIGAClt extends GraphClt {
     public HashMap<ByteBuffer, GigaIndex> gigaMaps;
@@ -165,7 +158,7 @@ public class GIGAClt extends GraphClt {
             AsyncMethodCallback amcb = new ScanCallBack(gi, totalReqs, rtn);
             for (int server : reqSrvs) {
                 totalReqs.getAndIncrement();
-                getAsyncClientConn(server).giga_scan(ByteBuffer.wrap(srcVertex), edgeType.get(), amcb);
+                getAsyncClientConn(server).giga_scan(ByteBuffer.wrap(srcVertex), edgeType.get(), ByteBuffer.wrap(gi.bitmap), amcb);
             }
         }
     }

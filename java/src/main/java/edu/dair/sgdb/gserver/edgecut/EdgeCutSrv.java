@@ -41,6 +41,11 @@ public class EdgeCutSrv extends AbstractSrv {
     }
 
     @Override
+    public Set<Integer> getEdgeLocs(byte[] src) {
+        return getEdgeLocs(src, 0);
+    }
+
+    @Override
     public Set<Integer> getEdgeLocs(byte[] src, int type) {
         Set<Integer> locs = new HashSet<>();
         int startIdx = getHashLoc(src, this.serverNum);

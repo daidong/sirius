@@ -61,6 +61,7 @@ public class IOGPSrv extends AbstractSrv {
 
     }
 
+
     public void start() {
         /**
          * IOGP Workers. Have to be after init();
@@ -105,6 +106,12 @@ public class IOGPSrv extends AbstractSrv {
                 locs.add(i);
 
         return locs;
+    }
+
+
+    @Override
+    public Set<Integer> getEdgeLocs(byte[] src) {
+        return getEdgeLocs(src, 0);
     }
 
 

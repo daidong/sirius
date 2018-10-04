@@ -5,7 +5,6 @@ import edu.dair.sgdb.tengine.SyncTravelEngine;
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.gserver.EdgeType;
 import edu.dair.sgdb.thrift.*;
-import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.Constants;
 import edu.dair.sgdb.utils.GLogger;
 import edu.dair.sgdb.utils.NIOHelper;
@@ -190,6 +189,16 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
+    public int batch_insert(List<KeyValue> batches, int type) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+    @Override
+    public List<Dist> get_state() throws TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+    @Override
     public synchronized List<KeyValue> read(ByteBuffer src, ByteBuffer dst, int type) throws TException {
         byte[] bsrc = NIOHelper.getActiveArray(src);
         byte[] bdst = NIOHelper.getActiveArray(dst);
@@ -299,24 +308,6 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
-    public synchronized List<KeyValue> force_scan(ByteBuffer src, int type) throws TException {
-        GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "force_scan");
-
-        byte[] bsrc = NIOHelper.getActiveArray(src);
-
-        List<KeyValue> rtn = new ArrayList<KeyValue>();
-
-        DBKey startKey = DBKey.MinDBKey(bsrc, type);
-        DBKey endKey = DBKey.MaxDBKey(bsrc, type);
-
-        ArrayList<KeyValue> kvs = inst.localStore.scanKV(startKey.toKey(), endKey.toKey());
-        rtn.addAll(kvs);
-
-        GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "force_scan");
-        return rtn;
-    }
-
-    @Override
     public synchronized List<KeyValue> scan(ByteBuffer src, int type) throws TException {
         GLogger.info("[%d]-[START]-[%s]", inst.getLocalIdx(), "scan");
 
@@ -379,12 +370,26 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
-    public GigaScan giga_scan(ByteBuffer src, int type) throws TException {
-        return null;
+    public synchronized List<KeyValue> iogp_force_scan(ByteBuffer src, int type) throws TException {
+        GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "force_scan");
+
+        byte[] bsrc = NIOHelper.getActiveArray(src);
+
+        List<KeyValue> rtn = new ArrayList<KeyValue>();
+
+        DBKey startKey = DBKey.MinDBKey(bsrc, type);
+        DBKey endKey = DBKey.MaxDBKey(bsrc, type);
+
+        ArrayList<KeyValue> kvs = inst.localStore.scanKV(startKey.toKey(), endKey.toKey());
+        rtn.addAll(kvs);
+
+        GLogger.debug("[%d]-[END]-[%s]", inst.getLocalIdx(), "force_scan");
+        return rtn;
     }
 
+
     @Override
-    public int batch_insert(List<KeyValue> batches, int type) throws TException {
+    public int iogp_batch_insert(List<KeyValue> batches, int type) throws TException {
         GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "batch_insert");
         if (type == 0) { //Split phase uses this
             RedirectException re = new RedirectException();
@@ -438,7 +443,7 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
-    public int split(ByteBuffer src) throws TException {
+    public int iogp_split(ByteBuffer src) throws TException {
         GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "split");
         inst.edgecounters.remove(src);
         inst.split.put(src, 1);
@@ -447,7 +452,7 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
-    public int reassign(ByteBuffer src, int type, int target) throws RedirectException, TException {
+    public int iogp_reassign(ByteBuffer src, int type, int target) throws RedirectException, TException {
         GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "reassign");
         if (type == 0) { //update hash-loc
             inst.loc.put(src, target);
@@ -466,7 +471,7 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
-    public int fennel(ByteBuffer src) throws RedirectException {
+    public int iogp_fennel(ByteBuffer src) throws RedirectException {
         GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "fennel");
         inst.edgecounters.putIfAbsent(src, new Counters());
         Counters c = inst.edgecounters.get(src);
@@ -476,7 +481,7 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
-    public int syncstatus(List<Status> statuses) throws RedirectException, RedirectException {
+    public int iogp_syncstatus(List<Status> statuses) throws RedirectException, RedirectException {
         for (Status s : statuses) {
             ByteBuffer v = ByteBuffer.wrap(s.getKey());
             int is_split = s.getIssplit();
@@ -488,9 +493,26 @@ public class IOGPHandler extends BaseHandler {
         return 0;
     }
 
+
+
     @Override
-    public List<Dist> get_state() throws TException {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public int giga_batch_insert(ByteBuffer src, int vid, List<KeyValue> batches) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+    @Override
+    public int giga_split(ByteBuffer src, int vid, int stage, ByteBuffer bitmap) throws TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+    @Override
+    public int giga_rec_split(ByteBuffer src, int vid, List<KeyValue> batches) throws TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+    @Override
+    public GigaScan giga_scan(ByteBuffer src, int type, ByteBuffer bitmap) throws TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
     }
 
 }

@@ -57,6 +57,17 @@ public class VertexCutSrv extends AbstractSrv {
         return reqs;
     }
 
+
+    @Override
+    public Set<Integer> getEdgeLocs(byte[] src) {
+        HashSet<Integer> reqs = new HashSet<Integer>();
+        for (int i = 0; i < this.serverNum; i++) {
+            reqs.add(i);
+        }
+        return reqs;
+    }
+
+
     @Override
     public Set<Integer> getVertexLoc(byte[] src) {
         Set<Integer> locs = new HashSet<>();

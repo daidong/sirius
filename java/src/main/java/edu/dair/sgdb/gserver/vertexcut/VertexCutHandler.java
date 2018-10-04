@@ -10,7 +10,6 @@ import org.apache.thrift.TException;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 public class VertexCutHandler extends BaseHandler {
@@ -34,6 +33,14 @@ public class VertexCutHandler extends BaseHandler {
         return 0;
     }
 
+
+    @Override
+    public int batch_insert(List<KeyValue> batches, int type) throws RedirectException, TException {
+        instance.localStore.batch_put(batches);
+        return Constants.RTN_SUCC;
+    }
+
+
     @Override
     public List<KeyValue> read(ByteBuffer src, ByteBuffer dst, int type) throws RedirectException, TException {
         byte[] bsrc = NIOHelper.getActiveArray(src);
@@ -52,54 +59,70 @@ public class VertexCutHandler extends BaseHandler {
     public List<KeyValue> scan(ByteBuffer src, int type) throws RedirectException, TException {
         byte[] bsrc = NIOHelper.getActiveArray(src);
 
-        List<KeyValue> rtn = new ArrayList<KeyValue>();
-        boolean flag = false;
-
         DBKey startKey = DBKey.MinDBKey(bsrc, type);
         DBKey endKey = DBKey.MaxDBKey(bsrc, type);
         ArrayList<KeyValue> kvs = instance.localStore.scanKV(startKey.toKey(), endKey.toKey());
 
-        return rtn;
-    }
-
-    @Override
-    public GigaScan giga_scan(ByteBuffer src, int type) throws TException {
-        return null;
-    }
-
-    @Override
-    public List<KeyValue> force_scan(ByteBuffer src, int type) throws RedirectException, TException {
-        return null;
-    }
-
-    @Override
-    public int batch_insert(List<KeyValue> batches, int type) throws RedirectException, TException {
-        instance.localStore.batch_put(batches);
-        return Constants.RTN_SUCC;
+        return kvs;
     }
 
     @Override
     public List<Dist> get_state() throws TException {
-        return null;
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+    /*
+     * Giga Interfaces
+     */
+    @Override
+    public int giga_split(ByteBuffer src, int vid, int stage, ByteBuffer bitmap) throws TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
     }
 
     @Override
-    public int split(ByteBuffer src) throws RedirectException, TException {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public int giga_rec_split(ByteBuffer src, int vid, List<KeyValue> batches) throws TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
     }
 
     @Override
-    public int reassign(ByteBuffer src, int type, int target) throws RedirectException, TException {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public GigaScan giga_scan(ByteBuffer src, int type, ByteBuffer bitmap) throws TException{
+        throw new UnsupportedOperationException("Not supported by this server.");
     }
 
     @Override
-    public int fennel(ByteBuffer src) throws RedirectException, TException {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public int giga_batch_insert(ByteBuffer src, int vid, List<KeyValue> batches) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+
+
+    /*
+     * IOGP Interfaces
+     */
+    @Override
+    public int iogp_split(ByteBuffer src) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+    @Override
+    public List<KeyValue> iogp_force_scan(ByteBuffer src, int type) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+    @Override
+    public int iogp_reassign(ByteBuffer src, int type, int target) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
     }
 
     @Override
-    public int syncstatus(List<Status> statuses) throws RedirectException, TException {
-        return 0;
+    public int iogp_fennel(ByteBuffer src) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+
+    @Override
+    public int iogp_syncstatus(List<Status> statuses) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
+    }
+    @Override
+    public int iogp_batch_insert(List<KeyValue> batches, int type) throws RedirectException, TException {
+        throw new UnsupportedOperationException("Not supported by this server.");
     }
 }

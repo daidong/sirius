@@ -1,8 +1,11 @@
 package edu.dair.sgdb.gserver;
 
+import edu.dair.sgdb.tengine.AsyncTravelEngine;
 import edu.dair.sgdb.tengine.SyncTravelEngine;
 import edu.dair.sgdb.thrift.*;
-import edu.dair.sgdb.thrift.*;
+import edu.dair.sgdb.utils.JenkinsHash;
+
+import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
 
 import java.nio.ByteBuffer;
@@ -13,27 +16,38 @@ import java.util.List;
  */
 public abstract class BaseHandler implements TGraphFSServer.Iface {
 
+    public AsyncTravelEngine asyncEngine = null;
     public SyncTravelEngine syncEngine = null;
 
-    abstract public int insert(ByteBuffer src, ByteBuffer dst, int type, ByteBuffer val) throws RedirectException, TException;
+    public int echo(int s, ByteBuffer payload) throws TException{
+        byte[] load = NIOHelper.getActiveArray(payload);
+        System.out.println("[Thrift Test] Server Receive: " + " Int: " + s + " ByteBuffer: " + new String(load));
+        return 0;
+    }
 
-    abstract public List<KeyValue> read(ByteBuffer src, ByteBuffer dst, int type) throws RedirectException, TException;
+    public int travel(TravelCommand tc) throws TException{
+        return asyncEngine.travel(tc);
+    }
 
-    abstract public List<KeyValue> scan(ByteBuffer src, int type) throws RedirectException, TException;
+    public int travelMaster(TravelCommand tc) throws TException {
+        return asyncEngine.travelMaster(tc);
+    }
 
-    abstract public List<KeyValue> force_scan(ByteBuffer src, int type) throws RedirectException, TException;
+    public int travelRtn(TravelCommand tc) throws TException {
+        return asyncEngine.travelRtn(tc);
+    }
 
-    abstract public int batch_insert(List<KeyValue> batches, int type) throws RedirectException, TException;
+    public int travelReg(TravelCommand tc) throws TException {
+        return asyncEngine.travelReg(tc);
+    }
 
-    abstract public List<Dist> get_state() throws TException;
+    public int travelFin(TravelCommand tc) throws TException {
+        return asyncEngine.travelFin(tc);
+    }
 
-    abstract public int split(ByteBuffer src) throws RedirectException, TException;
-
-    abstract public int reassign(ByteBuffer src, int type, int target) throws RedirectException, TException;
-
-    abstract public int fennel(ByteBuffer src) throws RedirectException, TException;
-
-    abstract public int syncstatus(List<Status> statuses) throws RedirectException, TException;
+    public int deleteTravelInstance(TravelCommand tc) throws TException {
+        return asyncEngine.deleteTravelInstance(tc);
+    }
 
     public int syncTravel(TravelCommand tc) throws TException {
         return syncEngine.syncTravel(tc);
@@ -61,6 +75,12 @@ public abstract class BaseHandler implements TGraphFSServer.Iface {
 
     public int deleteSyncTravelInstance(TravelCommand tc) throws TException {
         return syncEngine.deleteSyncTravelInstance(tc);
+    }
+
+    protected int getHashLocation(byte[] src, int serverNum) {
+        JenkinsHash jh = new JenkinsHash();
+        int hashi = Math.abs(jh.hash32(src));
+        return (hashi % serverNum);
     }
 
 }

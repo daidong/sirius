@@ -78,40 +78,40 @@ struct TravelCommand {
 }
 
 service TGraphFSServer {
+    i32 echo(1:i32 s, 2:binary payload),
+
     i32 insert(1:binary src, 2:binary dst, 3:i32 type, 4:binary val) throws (1: RedirectException r),
-
     i32 batch_insert(1:list<KeyValue> batches, 2:i32 type) throws (1: RedirectException r),
-
     list<Dist> get_state(), //list<Dist> stat_dst(1: Command c),
-
     list<KeyValue> read(1:binary src, 2:binary dst, 3:i32 type) throws (1: RedirectException r),
-
     list<KeyValue> scan(1:binary src, 2:i32 type) throws (1: RedirectException r),
 
-    GigaScan giga_scan(1:binary src, 2:i32 type),
+    i32 giga_batch_insert(1:binary src, 2:i32 vid, 3:list<KeyValue> batches) throws (1: RedirectException r),
+    i32 giga_split(1:binary src, 2:i32 vid, 3:i32 stage, 4:binary bitmap),
+    i32 giga_rec_split(1:binary src, 2:i32 vid, 3:list<KeyValue> batches),
+    GigaScan giga_scan(1:binary src, 2:i32 type, 3:binary bitmap),
 
-    list<KeyValue> force_scan(1:binary src, 2:i32 type) throws (1: RedirectException r),
+    i32 iogp_batch_insert(1:list<KeyValue> batches, 2:i32 type) throws (1: RedirectException r),
+    list<KeyValue> iogp_force_scan(1:binary src, 2:i32 type) throws (1: RedirectException r),
+    i32 iogp_split(1:binary src) throws (1: RedirectException r),
+    i32 iogp_reassign(1:binary src, 2:i32 type, 3:i32 target),
+    i32 iogp_fennel(1:binary src) throws (1: RedirectException r),
+    i32 iogp_syncstatus(1: list<Status> statuses) throws (1: RedirectException r),
 
-    i32 split(1:binary src) throws (1: RedirectException r),
 
-    i32 reassign(1:binary src, 2:i32 type, 3:i32 target),
-
-    i32 fennel(1:binary src) throws (1: RedirectException r),
-
-    i32 syncstatus(1: list<Status> statuses) throws (1: RedirectException r),
+    i32 travel(1:TravelCommand tc),
+	i32 travelMaster(1:TravelCommand tc),
+	i32 travelRtn(1:TravelCommand tc),
+	i32 travelReg(1:TravelCommand tc),
+	i32 travelFin(1:TravelCommand tc),
+	i32 deleteTravelInstance(1:TravelCommand tc),
 
     i32 syncTravel(1:TravelCommand tc),
-
     i32 syncTravelMaster(1:TravelCommand tc),
-
     i32 syncTravelRtn(1:TravelCommand tc),
-
     i32 syncTravelStart(1:TravelCommand tc),
-
     i32 syncTravelExtend(1:TravelCommand tc),
-
     i32 syncTravelFinish(1:TravelCommand tc),
-
     i32 deleteSyncTravelInstance(1:TravelCommand tc),
 
 }
