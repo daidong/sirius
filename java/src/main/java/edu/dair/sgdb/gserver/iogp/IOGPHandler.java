@@ -379,6 +379,11 @@ public class IOGPHandler extends BaseHandler {
     }
 
     @Override
+    public GigaScan giga_scan(ByteBuffer src, int type) throws TException {
+        return null;
+    }
+
+    @Override
     public int batch_insert(List<KeyValue> batches, int type) throws TException {
         GLogger.debug("[%d]-[START]-[%s]", inst.getLocalIdx(), "batch_insert");
         if (type == 0) { //Split phase uses this

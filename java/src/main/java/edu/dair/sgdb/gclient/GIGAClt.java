@@ -1,7 +1,8 @@
 package edu.dair.sgdb.gclient;
 
+import com.jcabi.immutable.Array;
 import edu.dair.sgdb.gserver.EdgeType;
-import edu.dair.sgdb.partitioner.DIDOIndex;
+import edu.dair.sgdb.partitioner.GigaIndex;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.Constants;
 import edu.dair.sgdb.utils.JenkinsHash;
@@ -10,27 +11,33 @@ import org.apache.thrift.async.AsyncMethodCallback;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class DIDOClt extends GraphClt {
-    public HashMap<ByteBuffer, DIDOIndex> gigaMaps;
+public class GIGAClt extends GraphClt {
+    public HashMap<ByteBuffer, GigaIndex> gigaMaps;
 
-    public DIDOClt(int port, ArrayList<String> alls) {
+    public GIGAClt(int port, ArrayList<String> alls) {
         super(port, alls);
         this.gigaMaps = new HashMap<>();
     }
 
-    private DIDOIndex surelyGetGigaMap(byte[] bsrc) {
+    private GigaIndex surelyGetGigaMap(byte[] bsrc) {
         ByteBuffer src = ByteBuffer.wrap(bsrc);
         if (!gigaMaps.containsKey(src)) {
             int startIdx = getHashLocation(bsrc, Constants.MAX_VIRTUAL_NODE);
-            gigaMaps.put(src, new DIDOIndex(startIdx, this.serverNum));
+            gigaMaps.put(src, new GigaIndex(startIdx, this.serverNum));
         }
         return gigaMaps.get(src);
     }
 
     private int getServerLoc(byte[] src, byte[] dst) {
-        DIDOIndex gi = surelyGetGigaMap(src);
+        GigaIndex gi = surelyGetGigaMap(src);
         JenkinsHash jh = new JenkinsHash();
         int dstHash = Math.abs(jh.hash32(dst));
         int index = gi.giga_get_index_for_hash(dstHash);
@@ -40,7 +47,7 @@ public class DIDOClt extends GraphClt {
 
     @Override
     public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey) throws TException {
-        DIDOIndex gi = surelyGetGigaMap(srcVertex);
+        GigaIndex gi = surelyGetGigaMap(srcVertex);
 
         while (true) {
             int target = getServerLoc(srcVertex, dstKey);
@@ -56,7 +63,7 @@ public class DIDOClt extends GraphClt {
 
     @Override
     public int insert(byte[] srcVertex, EdgeType edgeType, byte[] dstKey, byte[] value) throws TException {
-        DIDOIndex gi = surelyGetGigaMap(srcVertex);
+        GigaIndex gi = surelyGetGigaMap(srcVertex);
         int retry = 0;
         while (true) {
             int target = getServerLoc(srcVertex, dstKey);
@@ -106,7 +113,7 @@ public class DIDOClt extends GraphClt {
     }
 
     private HashSet<Integer> getLocs(byte[] src, HashSet<Integer> excludes) {
-        DIDOIndex gi = surelyGetGigaMap(src);
+        GigaIndex gi = surelyGetGigaMap(src);
         HashSet<Integer> locs = gi.giga_get_all_servers();
         locs.removeAll(excludes);
         return locs;
@@ -115,10 +122,10 @@ public class DIDOClt extends GraphClt {
     private class ScanCallBack implements AsyncMethodCallback<TGraphFSServer.AsyncClient.giga_scan_call> {
 
         List<KeyValue> rtn;
-        DIDOIndex gi;
+        GigaIndex gi;
         AtomicInteger ai;
 
-        public ScanCallBack(DIDOIndex gi, AtomicInteger total, List<KeyValue> kvs) {
+        public ScanCallBack(GigaIndex gi, AtomicInteger total, List<KeyValue> kvs){
             this.rtn = kvs;
             this.gi = gi;
             this.ai = total;
@@ -126,7 +133,7 @@ public class DIDOClt extends GraphClt {
 
         @Override
         public void onComplete(TGraphFSServer.AsyncClient.giga_scan_call scan_call) {
-            try {
+            try{
                 GigaScan scan_rtn = scan_call.getResult();
                 this.rtn.addAll(scan_rtn.getKvs());
                 gi.giga_update_bitmap(scan_rtn.getBitmap());
@@ -143,13 +150,13 @@ public class DIDOClt extends GraphClt {
 
     @Override
     public List<KeyValue> scan(byte[] srcVertex, EdgeType edgeType) throws TException {
-        DIDOIndex gi = surelyGetGigaMap(srcVertex);
+        GigaIndex gi = surelyGetGigaMap(srcVertex);
         List<KeyValue> rtn = new ArrayList<>();
         HashSet<Integer> reqSrvs;
         HashSet<Integer> alreadySentSrvs = new HashSet<>();
         AtomicInteger totalReqs = new AtomicInteger(0);
 
-        while (true) {
+        while (true){
             reqSrvs = getLocs(srcVertex, alreadySentSrvs);
             alreadySentSrvs.addAll(reqSrvs);
             if (reqSrvs.isEmpty() && totalReqs.get() == 0)

@@ -239,4 +239,10 @@ public abstract class AbstractSrv {
     public void setAllSrvs(List<String> allSrvs) {
         this.allSrvs = allSrvs;
     }
+
+    protected int getHashLocation(byte[] src, int serverNum) {
+        JenkinsHash jh = new JenkinsHash();
+        int hashi = Math.abs(jh.hash32(src));
+        return (hashi % serverNum);
+    }
 }

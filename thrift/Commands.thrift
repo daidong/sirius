@@ -5,6 +5,11 @@ struct KeyValue {
   2: binary value,
 }
 
+struct GigaScan {
+    1: required list<KeyValue> kvs,
+    2: required binary bitmap,
+}
+
 struct Movement {
   1: required i32 loc,
   2: required KeyValue kv,
@@ -14,6 +19,7 @@ exception RedirectException{
     1: required i32 status,
     2: optional i32 target,
     3: optional list<Movement> re,
+    4: optional binary bitmap,
 }
 
 struct Dist{
@@ -81,6 +87,8 @@ service TGraphFSServer {
     list<KeyValue> read(1:binary src, 2:binary dst, 3:i32 type) throws (1: RedirectException r),
 
     list<KeyValue> scan(1:binary src, 2:i32 type) throws (1: RedirectException r),
+
+    GigaScan giga_scan(1:binary src, 2:i32 type),
 
     list<KeyValue> force_scan(1:binary src, 2:i32 type) throws (1: RedirectException r),
 
