@@ -19,7 +19,7 @@ bound=`expr $1 - 1`
 # Touch Every Server
 for i in $(seq 0 $bound)
 do
-	ssh-keyscan node-$i >> ~/.ssh/known_hosts
+	ssh-keyscan node$i >> ~/.ssh/known_hosts
 done
 
 # Install Packages
@@ -27,3 +27,5 @@ for i in $(seq 0 $bound)
 do
 	ssh -t node$i "$PROCESSOR_HOME/package-installer.sh" &
 done
+
+echo "$PROCESSOR_HOME"
