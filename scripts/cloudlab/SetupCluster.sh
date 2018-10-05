@@ -25,5 +25,5 @@ done
 # Install Packages
 for i in $(seq 0 $bound)
 do
-	ssh -t node-$i "$PROCESSOR_HOME/package-installer.sh" &
+	ssh -t node$i "$PROCESSOR_HOME/package-installer.sh" &
 done
