@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-rm -rf /tmp/iogpdb*
+rm -rf /tmp/sgdb*
 
-../release/iogp-0.1/bin/server.sh start -db /tmp/iogpdb -id 0 -type iogp -srvlist 127.0.0.1:5555 127.0.0.1:5556 127.0.0.1:5557
-rm /tmp/iogpsrv.pid
+../release/sgdb-0.1/bin/server.sh start -db /tmp/sgdb -id 0 -type iogp -srvlist 127.0.0.1:5555 127.0.0.1:5556 127.0.0.1:5557
+rm /tmp/sgdbsrv.pid
 
-../release/iogp-0.1/bin/server.sh start -db /tmp/iogpdb -id 1 -type iogp -srvlist 127.0.0.1:5555 127.0.0.1:5556 127.0.0.1:5557
-rm /tmp/iogpsrv.pid
+../release/sgdb-0.1/bin/server.sh start -db /tmp/sgdb -id 1 -type iogp -srvlist 127.0.0.1:5555 127.0.0.1:5556 127.0.0.1:5557
+rm /tmp/sgdbsrv.pid
 
-../release/iogp-0.1/bin/server.sh start -db /tmp/iogpdb -id 2 -type iogp -srvlist 127.0.0.1:5555 127.0.0.1:5556 127.0.0.1:5557
-rm /tmp/iogpsrv.pid
+../release/sgdb-0.1/bin/server.sh start -db /tmp/sgdb -id 2 -type iogp -srvlist 127.0.0.1:5555 127.0.0.1:5556 127.0.0.1:5557
+rm /tmp/sgdbsrv.pid
 
 
 

@@ -53,7 +53,7 @@ if [ "LIMIT" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
 		echo Increase File Open Limit on Node-$i
-		ssh -t node-$i "sudo cp /proj/cloudincr-PG0/tools/limits.conf /etc/security/limits.conf"
+		ssh -t node-$i "sudo cp /proj/dirr-PG0/tools/limits.conf /etc/security/limits.conf"
 	done
 fi
 

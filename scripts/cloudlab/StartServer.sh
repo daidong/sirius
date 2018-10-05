@@ -48,11 +48,11 @@ do
 done
 
 localdir=${db_dir}
-localdb=${localdir}/gfsdb
+localdb=${localdir}/sgdb
 
 for i in $(seq 0 $bound)
 do
-    echo Start GraphDB server on node-$i
+    echo Start Simplegdb-Java server on node-$i
     ssh node-$i "mkdir -p $localdir"
-    ssh node-$i "~/iogp-code/release/iogp-0.1/bin/server.sh start -db $localdb -id $i -type ${server_type} -srvlist $seeds" &
+    ssh node-$i "~/simplegdb-Java/release/sgdb-0.1/bin/server.sh start -db $localdb -id $i -type ${server_type} -srvlist $seeds" &
 done

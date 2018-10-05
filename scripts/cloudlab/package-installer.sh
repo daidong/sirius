@@ -8,8 +8,8 @@ sudo apt-get install -y libgflags-dev
 sudo apt-get install -y libsnappy-dev
 
 cd ~/
-git clone https://github.com/daidong/iogp-code.git
-cd ~/iogp-code
+git clone https://github.com/daidong/simplegdb-Java.git
+cd ~/simplegdb-Java
 make all
 
 mkdir -p ~/dbs/
