@@ -25,6 +25,15 @@ if [ "UPDATE" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
     	echo UPDATE Node$i
+    	ssh node$i "cd ~/simplegdb-Java; git pull" &
+	done
+fi
+
+# UPDATE and COMPILE
+if [ "UPDATE-COMPILE" = $2 ]; then
+	for i in $(seq 0 $bound)
+	do
+    	echo UPDATE Node$i
     	ssh node$i "cd ~/simplegdb-Java; git pull; make all" &
 	done
 fi
