@@ -43,9 +43,9 @@ for i in $(seq 0 $bound)
 do
     if [ "$line" -eq 0 ]
     then
-        seeds="node-$i:$port"
+        seeds="node$i:$port"
     else
-        seeds="$seeds node-$i:$port"
+        seeds="$seeds node$i:$port"
     fi
     line=`expr 1 + $line`
 done

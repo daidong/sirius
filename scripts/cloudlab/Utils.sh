@@ -6,8 +6,8 @@ bound=`expr $1 - 1`
 if [ "SOURCE" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
-    	echo SOURCE Node-$i
-    	ssh node-$i "source ~/.bashrc"
+    	echo SOURCE Node$i
+    	ssh node$i "source ~/.bashrc"
 	done
 fi
 
@@ -15,8 +15,8 @@ fi
 if [ "RM" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
-    	echo RM Node-$i
-    	ssh node-$i "rm -r ~/dbs/*"
+    	echo RM Node$i
+    	ssh node$i "rm -r ~/dbs/*"
 	done
 fi
 
@@ -24,8 +24,8 @@ fi
 if [ "UPDATE" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
-    	echo UPDATE Node-$i
-    	ssh node-$i "cd ~/simplegdb-Java; git pull; make all" &
+    	echo UPDATE Node$i
+    	ssh node$i "cd ~/simplegdb-Java; git pull; make all" &
 	done
 fi
 
@@ -33,8 +33,8 @@ fi
 if [ "SNTP" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
-    	echo SNTP Node-$i
-    	ssh -t node-$i "sudo sntp -s 24.56.178.140" &
+    	echo SNTP Node$i
+    	ssh -t node$i "sudo sntp -s 24.56.178.140" &
 	done
 fi
 
@@ -42,8 +42,8 @@ fi
 if [ "JPS" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
-    	echo JPS Node-$i
-    	ssh -t node-$i "jps"
+    	echo JPS Node$i
+    	ssh -t node$i "jps"
 	done
 fi
 
@@ -51,8 +51,8 @@ fi
 if [ "LIMIT" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
-		echo Increase File Open Limit on Node-$i
-		ssh -t node-$i "sudo cp /proj/dirr-PG0/tools/limits.conf /etc/security/limits.conf"
+		echo Increase File Open Limit on Node$i
+		ssh -t node$i "sudo cp /proj/dirr-PG0/tools/limits.conf /etc/security/limits.conf"
 	done
 fi
 
