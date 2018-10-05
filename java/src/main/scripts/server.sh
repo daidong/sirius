@@ -16,7 +16,7 @@ done
 PRGDIR=`dirname "$PRG"`
 [ -z "$PROCESSOR_HOME" ] && PROCESSOR_HOME=`cd "$PRGDIR/.." ; pwd`
 
-SERVER_NAME=iogp
+SERVER_NAME=sgdb
 
 # path
 BIN_PATH=$PROCESSOR_HOME/bin
@@ -39,7 +39,7 @@ done
 DEBUG_ARGS="";
 #
 PROGRAM_ARGS="-Xms4g -Xmx4g  -Xmn1g -Dapp.name=${SERVER_NAME} -Dapp.base=${PROCESSOR_HOME} -XX:+UseConcMarkSweepGC -server -XX:SurvivorRatio=5 -XX:CMSInitiatingOccupancyFraction=80 -XX:+PrintTenuringDistribution  -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime ${DEBUG_ARGS} -Xloggc:./gc.log"
-PIDFILE=/tmp/iogpsrv.pid
+PIDFILE=/tmp/sgdbsrv.pid
 
 HOST=`hostname`
 #

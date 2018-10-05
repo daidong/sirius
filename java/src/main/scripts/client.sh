@@ -16,7 +16,7 @@ done
 PRGDIR=`dirname "$PRG"`
 [ -z "$PROCESSOR_HOME" ] && PROCESSOR_HOME=`cd "$PRGDIR/.." ; pwd`
 
-SERVER_NAME=iogpclient
+SERVER_NAME=sgdbclient
 
 # path
 BIN_PATH=$PROCESSOR_HOME/bin
