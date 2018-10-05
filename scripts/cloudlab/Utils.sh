@@ -2,7 +2,6 @@
 
 bound=`expr $1 - 1`
 
-
 # SOURCE
 if [ "SOURCE" = $2 ]; then
 	for i in $(seq 0 $bound)
@@ -26,7 +25,7 @@ if [ "UPDATE" = $2 ]; then
 	for i in $(seq 0 $bound)
 	do
     	echo UPDATE Node-$i
-    	ssh node-$i "cd ~/iogp-code; git pull; make all" &
+    	ssh node-$i "cd ~/simplegdb-Java; git pull; make all" &
 	done
 fi
 
