@@ -182,7 +182,6 @@ public class ClientMain {
                 br = new BufferedReader(new FileReader(graphFile));
                 start = System.currentTimeMillis();
                 while ((line = br.readLine()) != null) {
-                    long sts = System.currentTimeMillis();
                     String[] splits = line.split(" ");
                     byte[] src = splits[0].getBytes();
                     byte[] dst = splits[1].getBytes();
@@ -265,7 +264,6 @@ public class ClientMain {
                 break;
 
             case "travel":
-
                 /*
                     First, Insert all edges.
                  */
