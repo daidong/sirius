@@ -363,6 +363,7 @@ public class AsyncTravelEngine {
                 synchronized (client) {
                     client.travel(tc2);
                 }
+                instance.releaseClientConn(s, client);
             } else {
                 travel(tc2);
             }

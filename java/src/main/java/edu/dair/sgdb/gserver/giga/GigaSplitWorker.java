@@ -125,6 +125,7 @@ public class GigaSplitWorker implements Runnable {
                                 try {
                                     TGraphFSServer.Client target = instance.getClientConn(server);
                                     target.giga_batch_insert(src, newVid, movs);
+                                    instance.releaseClientConn(server, target);
                                 } catch (TException e) {
                                     e.printStackTrace();
                                 }
@@ -160,6 +161,7 @@ public class GigaSplitWorker implements Runnable {
                             //synchronized (target) {
                             target.giga_split(src, newVid, Constants.SPLIT_END, ByteBuffer.wrap(gi.bitmap));
                             //}
+                            instance.releaseClientConn(server,target);
                         } catch (TException e) {
                             e.printStackTrace();
                         }

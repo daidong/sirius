@@ -19,12 +19,14 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class SyncTravelEngine {
 
     private AbstractSrv instance;
     public ConcurrentHashMap<Long, SyncTravelStatus> travel_status;
-    public HashMap<Long, Object> locks;
     public HashMap<Long, byte[]> tsrcs;
     public AtomicInteger mid;
     public PreLoadMemoryPool pool;
@@ -32,7 +34,6 @@ public class SyncTravelEngine {
     public SyncTravelEngine(AbstractSrv s) {
         this.instance = s;
         this.travel_status = new ConcurrentHashMap<>();
-        this.locks = new HashMap<Long, Object>();
         this.tsrcs = new HashMap<>();
         this.mid = new AtomicInteger(1);
         this.pool = new PreLoadMemoryPool();
@@ -189,9 +190,8 @@ public class SyncTravelEngine {
         int stepId, replyTo;
         long ts = tc.getTs();
         long travelId = (long) this.mid.incrementAndGet()
-                + ((long) (instance.getLocalIdx() + 1) * (1L << 32));
+                         + ((long) (instance.getLocalIdx() + 1) * (1L << 32));
         startSyncTravelTime(travelId);
-        this.locks.put(travelId, new Object());
 
         GLogger.info("%d Recieve TravelMaster From %d At %d",
                 instance.getLocalIdx(), -1, System.nanoTime());
@@ -251,14 +251,9 @@ public class SyncTravelEngine {
                     instance.getLocalIdx(), s, System.nanoTime());
 
             if (s != instance.getLocalIdx()) {
-                TGraphFSServer.Client client = instance.getClientConnWithPool(s);
+                TGraphFSServer.Client client = instance.getClientConn(s);
                 client.syncTravel(tc1);
-                /*
-                Client client = inst.getClientConn(s);
-                synchronized (client) {
-                    client.syncTravel(tc1);
-                }
-                */
+                instance.releaseClientConn(s, client);
             } else {
                 syncTravel(tc1);
             }
@@ -280,26 +275,14 @@ public class SyncTravelEngine {
                     instance.getLocalIdx(), s, System.nanoTime());
 
             if (s != instance.getLocalIdx()) {
-                TGraphFSServer.Client client = instance.getClientConnWithPool(s);
+                TGraphFSServer.Client client = instance.getClientConn(s);
                 client.syncTravelStart(tc1);
-                /*
-                Client client = inst.getClientConn(s);
-                synchronized (client) {
-                    client.syncTravelStart(tc1);
-                }
-                */
+                instance.releaseClientConn(s, client);
             } else {
                 syncTravelStart(tc1);
             }
         }
 
-        Object lock = this.locks.get(travelId);
-        synchronized (lock) {
-            try {
-                lock.wait();
-            } catch (InterruptedException ex) {
-            }
-        }
         return 0;
     }
 
@@ -413,11 +396,6 @@ public class SyncTravelEngine {
             instance.workerPool.execute(new DeleteTravelInstance(instance, travelId));
         }
 
-        Object lock = this.locks.get(travelId);
-        synchronized (lock) {
-            lock.notify();
-        }
-
         return 0;
     }
 
@@ -438,14 +416,9 @@ public class SyncTravelEngine {
             for (int s = 0; s < instance.serverNum; s++) {
                 try {
                     if (s != instance.getLocalIdx()) {
-                        TGraphFSServer.Client client = instance.getClientConnWithPool(s);
+                        TGraphFSServer.Client client = instance.getClientConn(s);
                         client.deleteSyncTravelInstance(tc);
-                        /*
-                        Client client = inst.getClientConn(s);
-                        synchronized (client) {
-                            client.deleteSyncTravelInstance(tc);
-                        }
-                        */
+                        instance.releaseClientConn(s, client);
                     } else {
                         deleteSyncTravelInstance(tc);
                     }
@@ -533,17 +506,12 @@ public class SyncTravelEngine {
                     GLogger.info("%d Send TravelStart to %d at %d for %d",
                             instance.getLocalIdx(), s, System.nanoTime(), stepId + 1);
 
-                    TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
-                    AsyncMethodCallback amcb = new SendTraverlStartCallback(s);
-                    aclient.syncTravelStart(tc1, amcb);
+                    TGraphFSServer.Client client = instance.getClientConn(s);
+                    client.syncTravelStart(tc1);
+                    instance.releaseClientConn(s, client);
 
-                /*
-                TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConn(s);
-                synchronized (aclient) {
-                    aclient.syncTravelStart(tc1, new SendTraverlStartCallback(s));
                 }
-                */
-                }
+
             } else if (isSyncServerEmpty(travelId, stepId) && isSyncServerEmpty(travelId, stepId + 1)) {
 
                 GLogger.info("in SyncTravelRtn, Step %d Finishes at %d", stepId, costTime);
@@ -551,34 +519,11 @@ public class SyncTravelEngine {
                         instance.getLocalIdx(), travelId,
                         new String(this.tsrcs.get(travelId)),
                         costTime);
-
-                Object lock = this.locks.get(travelId);
-                synchronized (lock) {
-                    lock.notify();
-                }
             }
         }
 
         return 0;
     }
 
-    class SendTraverlStartCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncTravelStart_call> {
-
-        public int finished;
-
-        public SendTraverlStartCallback(int f) {
-            this.finished = f;
-        }
-
-        @Override
-        public void onComplete(TGraphFSServer.AsyncClient.syncTravelStart_call t) {
-            return;
-        }
-
-        @Override
-        public void onError(Exception e) {
-            GLogger.error("SyncTravelEdgeWorker BroadCastTVCallback Error: %s", e);
-        }
-    }
 
 }

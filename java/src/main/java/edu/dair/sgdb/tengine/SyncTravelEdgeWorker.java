@@ -107,19 +107,11 @@ public class SyncTravelEdgeWorker implements Runnable {
                 .setSub_type(0);
 
         try {
-            TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
+            TGraphFSServer.Client client = instance.getClientConn(replyTo);
             GLogger.info("%d Send TravelExtend to %d at %d",
                     instance.getLocalIdx(), replyTo, System.nanoTime());
-
             client.syncTravelExtend(tc1);
-
-            /*
-            Client client = inst.getClientConn(replyTo);
-            synchronized (client) {
-                GLogger.info("S TE %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
-                client.syncTravelExtend(tc1);
-            }
-            */
+            instance.releaseClientConn(replyTo, client);
         } catch (TException e) {
             e.printStackTrace();
         }
@@ -158,16 +150,39 @@ public class SyncTravelEdgeWorker implements Runnable {
                     //engine.syncTravel(tc2);
                 }
 
-                TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
-                AsyncMethodCallback amcb = new EdgeBroadCastTVCallback(s);
-                aclient.syncTravel(tc2, amcb);
+                TGraphFSServer.Client client = instance.getClientConn(s);
+                client.syncTravel(tc2);
+                instance.releaseClientConn(s, client);
 
-                /*
-                AsyncClient aclient = inst.getAsyncClientConn(s);
-                synchronized (aclient) {
-                    aclient.syncTravel(tc2, new EdgeBroadCastTVCallback(s));
+                GLogger.debug("[%d] EdgeCallback Finish %d to %d(%d), Complete sending %d, %s not finish yet",
+                        instance.getLocalIdx(), getFrom, instance.getLocalIdx(), 1, s, targets);
+
+                targets.remove(s);
+                if (targets.isEmpty()) { //finish all sends, send SYNC_TRAVEL_FINISH Command
+
+                    TravelCommand tc3 = new TravelCommand();
+                    tc3.setType(TravelCommandType.SYNC_TRAVEL_FINISH).setTravelId(travelId)
+                            .setStepId(stepId).setGet_from(getFrom).setLocal_id(instance.getLocalIdx())
+                            .setReply_to(replyTo).setTs(ts).setSub_type(1); //finish on edges
+
+                    //GLogger.warn("[%d] SyncTravelEdgeWorker stepId[%d] Finish %d to %s (%d)",
+                    //        inst.getLocalIdx(), (stepId), getFrom, inst.getLocalIdx(), 1);
+
+                    try {
+                        TGraphFSServer.Client client1 = instance.getClientConn(replyTo);
+                        GLogger.info("%d Send TravelFinish to %d at %d on reading edges",
+                                instance.getLocalIdx(), replyTo, System.nanoTime());
+                        client1.syncTravelFinish(tc3);
+                        instance.releaseClientConn(replyTo, client1);
+
+                    } catch (TException e) {
+                        e.printStackTrace();
+                    }
+
+                    return;
                 }
-                */
+
+
             } catch (TException e) {
                 e.printStackTrace();
             }
@@ -184,71 +199,15 @@ public class SyncTravelEdgeWorker implements Runnable {
             //        inst.getLocalIdx(), (stepId), getFrom, inst.getLocalIdx(), 1);
 
             try {
-                TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
+                TGraphFSServer.Client client = instance.getClientConn(replyTo);
                 GLogger.info("%d Send TravelFinish to %d at %d on reading edges",
                         instance.getLocalIdx(), replyTo, System.nanoTime());
-
                 client.syncTravelFinish(tc3);
+                instance.releaseClientConn(replyTo, client);
 
             } catch (TException e) {
                 e.printStackTrace();
             }
-        }
-
-    }
-
-    class EdgeBroadCastTVCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncTravel_call> {
-
-        int finished;
-
-        public EdgeBroadCastTVCallback(int f) {
-            this.finished = f;
-        }
-
-        @Override
-        public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
-            synchronized (targets) {
-                targets.remove(this.finished);
-
-                GLogger.debug("[%d] EdgeCallback Finish %d to %d(%d), Complete sending %d, %s not finish yet", instance.getLocalIdx(), getFrom, instance.getLocalIdx(), 1, this.finished, targets);
-
-                if (targets.isEmpty()) { //finish all sends, send SYNC_TRAVEL_FINISH Command
-
-                    TravelCommand tc3 = new TravelCommand();
-                    tc3.setType(TravelCommandType.SYNC_TRAVEL_FINISH).setTravelId(travelId)
-                            .setStepId(stepId).setGet_from(getFrom).setLocal_id(instance.getLocalIdx())
-                            .setReply_to(replyTo).setTs(ts).setSub_type(1); //finish on edges
-
-                    //GLogger.warn("[%d] SyncTravelEdgeWorker stepId[%d] Finish %d to %s (%d)",
-                    //        inst.getLocalIdx(), (stepId), getFrom, inst.getLocalIdx(), 1);
-
-                    try {
-                        TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
-                        GLogger.info("%d Send TravelFinish to %d at %d on reading edges",
-                                instance.getLocalIdx(), replyTo, System.nanoTime());
-
-                        client.syncTravelFinish(tc3);
-
-                        /*
-                        Client client = inst.getClientConn(replyTo);
-                        synchronized (client) {
-                            GLogger.info("S TF %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
-                            client.syncTravelFinish(tc3);
-                        }
-                        */
-                    } catch (TException e) {
-                        e.printStackTrace();
-                    }
-
-                    return;
-                }
-            }
-        }
-
-        @Override
-        public void onError(Exception excptn) {
-            GLogger.error("Error [%d] Send TV to [%d]", instance.getLocalIdx(), this.finished);
-            GLogger.error("SyncTravelEdgeWorker BroadCastTVCallback Error: %s", excptn);
         }
 
     }

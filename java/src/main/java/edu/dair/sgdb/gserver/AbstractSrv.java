@@ -11,27 +11,22 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
 
 public abstract class AbstractSrv {
 
     public TGraphFSServer.Iface handler;
     public TGraphFSServer.Processor processor;
-    public TGraphFSServer.Client[] clients;
-    public ArrayList<TGraphFSServer.Client[]> clientPools;
-    public AtomicInteger clientIndex;
 
     /**
-     * Asynchronous Clients
+     * Synchronous Clients
      */
-    public TGraphFSServer.AsyncClient[] asyncClients;
-    public ArrayList<TGraphFSServer.AsyncClient[]> asyncClientPools;
-    public AtomicInteger asyncClientIndex;
+    public HashMap<Integer, ConcurrentLinkedQueue<TGraphFSServer.Client>> clientPools;
 
     private String dbFile = null;
     private int localIdx = -1;
@@ -61,32 +56,16 @@ public abstract class AbstractSrv {
         /**
          * Sync Clients
          */
-        this.clients = new TGraphFSServer.Client[this.serverNum];
-        for (int i = 0; i < this.serverNum; i++) {
-            this.clients[i] = null;
-        }
-        this.clientPools = new ArrayList<>(Constants.THRIFT_POOL_SIZE);
-        for (int i = 0; i < Constants.THRIFT_POOL_SIZE; i++) {
-            this.clientPools.add(new TGraphFSServer.Client[this.serverNum]);
-        }
-        this.clientIndex = new AtomicInteger(0);
-
-        /**
-         * Async Clients
-         */
-        this.asyncClients = new TGraphFSServer.AsyncClient[this.serverNum];
-        this.asyncClientPools = new ArrayList<>(Constants.THRIFT_POOL_SIZE);
-        for (int i = 0; i < Constants.THRIFT_POOL_SIZE; i++) {
-            this.asyncClientPools.add(new TGraphFSServer.AsyncClient[this.serverNum]);
-        }
-        this.asyncClientIndex = new AtomicInteger(0);
+        this.clientPools = new HashMap<>(this.serverNum);
+        for (int i = 0; i < this.serverNum; i++)
+            this.clientPools.put(i, new ConcurrentLinkedQueue<TGraphFSServer.Client>());
 
     }
 
     public AbstractSrv() {
         int procs = Runtime.getRuntime().availableProcessors();
         procs = Math.max(procs, 1);
-        this.workerPool = Executors.newFixedThreadPool(2 * procs);
+        this.workerPool = Executors.newFixedThreadPool(Constants.WORKER_THREAD_FACTOR * procs);
         this.prefetchPool = Executors.newFixedThreadPool(4 * procs);
         /*
          ConsoleReporter reporter = ConsoleReporter.forRegistry(METRICS)
@@ -112,105 +91,31 @@ public abstract class AbstractSrv {
     abstract public void start();
 
 
-    public synchronized TGraphFSServer.Client getClientConn(int target) throws TTransportException {
+    public TGraphFSServer.Client getClientConn(int target) throws TTransportException {
 
-        if (clients[target] != null) {
-            return clients[target];
-        }
-        String addrPort = this.getAllSrvs().get(target);
-        String taddr = addrPort.split(":")[0];
-        int tport = Integer.parseInt(addrPort.split(":")[1]);
-        TTransport transport = new TFramedTransport(new TSocket(taddr, tport), 1024 * 1024 * 1024);
-        //TTransport transport = new TSocket(taddr, tport);
-        transport.open();
-        TProtocol protocol = new TBinaryProtocol(transport);
-        TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
-        clients[target] = client;
-        return client;
-    }
+        if (!this.clientPools.containsKey(target))
+            this.clientPools.put(target, new ConcurrentLinkedQueue<TGraphFSServer.Client>());
 
-
-    /**
-     * @param target
-     * @return AsyncClient
-     * @throws TTransportException
-     */
-    public synchronized TGraphFSServer.AsyncClient getAsyncClientConn(int target) {
-        try {
-            if (asyncClients[target] != null) {
-                return asyncClients[target];
-            }
+        if (this.clientPools.get(target).isEmpty()){
             String addrPort = this.getAllSrvs().get(target);
             String taddr = addrPort.split(":")[0];
             int tport = Integer.parseInt(addrPort.split(":")[1]);
-
-            /*
-             Not Sure which one is correct. Try TNonblockingSocket first.
-             1. new TNonblockingSocket(taddr, tport) seems not correct
-             TTransport transport = new TFramedTransport(new TSocket(taddr, tport));
-             transport.open();
-             TProtocol protocol = new TBinaryProtocol(transport);
-             */
-            TGraphFSServer.AsyncClient client
-                    = new TGraphFSServer.AsyncClient(new TBinaryProtocol.Factory(),
-                    new TAsyncClientManager(),
-                    new TNonblockingSocket(taddr, tport));
-
-            asyncClients[target] = client;
+            TTransport transport = new TFramedTransport(new TSocket(taddr, tport), 1024 * 1024 * 1024);
+            transport.open();
+            TProtocol protocol = new TBinaryProtocol(transport);
+            TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
             return client;
-        } catch (IOException ex) {
-            GLogger.error("New AsyncClient Error: %d", target);
-            return null;
-        }
-    }
-
-
-    public synchronized TGraphFSServer.Client getClientConnWithPool(int target) throws TTransportException {
-        int thisId = (this.clientIndex.getAndIncrement() % Constants.THRIFT_POOL_SIZE);
-
-        if (this.clientPools.get(thisId)[target] != null) {
-            return this.clientPools.get(thisId)[target];
-        }
-
-        String addrPort = this.getAllSrvs().get(target);
-        String taddr = addrPort.split(":")[0];
-        int tport = Integer.parseInt(addrPort.split(":")[1]);
-        TTransport transport = new TFramedTransport(new TSocket(taddr, tport), 1024 * 1024 * 1024);
-        //TTransport transport = new TSocket(taddr, tport);
-        transport.open();
-        TProtocol protocol = new TBinaryProtocol(transport);
-        TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
-        this.clientPools.get(thisId)[target] = client;
-        return client;
-    }
-
-    public synchronized TGraphFSServer.AsyncClient getAsyncClientConnWithPool(int target) {
-        try {
-            int thisId = (this.asyncClientIndex.getAndIncrement() % Constants.THRIFT_POOL_SIZE);
-
-            if (this.asyncClientPools.get(thisId)[target] != null) {
-                return this.asyncClientPools.get(thisId)[target];
-            }
-
-            String addrPort = this.getAllSrvs().get(target);
-            String taddr = addrPort.split(":")[0];
-            int tport = Integer.parseInt(addrPort.split(":")[1]);
-
-            TGraphFSServer.AsyncClient client
-                    = new TGraphFSServer.AsyncClient(new TBinaryProtocol.Factory(),
-                    new TAsyncClientManager(),
-                    new TNonblockingSocket(taddr, tport));
-
-            this.asyncClientPools.get(thisId)[target] = client;
+        } else {
+            TGraphFSServer.Client client = this.clientPools.get(target).poll(); //retrieve and remove the first element
             return client;
-        } catch (IOException ex) {
-            GLogger.error("New AsyncClient Error: %d", target);
-            return null;
         }
     }
 
-    public synchronized void closeClientConn(int target) {
-        clients[target].getOutputProtocol().getTransport().close();
+    public boolean releaseClientConn(int target, TGraphFSServer.Client c){
+        if (!this.clientPools.containsKey(target))
+            System.out.println("Releasing Client Connection Error");
+        this.clientPools.get(target).add(c);
+        return true;
     }
 
     public String getDbFile() {

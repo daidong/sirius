@@ -1,7 +1,10 @@
 package edu.dair.sgdb.gserver;
 
+import edu.dair.sgdb.gserver.dido.DIDOSrv;
 import edu.dair.sgdb.gserver.edgecut.EdgeCutSrv;
+import edu.dair.sgdb.gserver.giga.GIGASrv;
 import edu.dair.sgdb.gserver.iogp.IOGPSrv;
+import edu.dair.sgdb.gserver.vertexcut.VertexCutSrv;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +49,12 @@ public class ServerExecutable implements Runnable {
             case "iogp":
                 abstractSrv = new IOGPSrv();
                 break;
+            case "giga":
+                abstractSrv = new GIGASrv();
+            case "dido":
+                abstractSrv = new DIDOSrv();
+            case "vertexcut":
+                abstractSrv = new VertexCutSrv();
             default:
                 System.out.println("Undefined Server Type!");
                 break;

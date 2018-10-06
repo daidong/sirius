@@ -8,6 +8,7 @@ import edu.dair.sgdb.utils.GLogger;
 import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.apache.thrift.transport.TTransportException;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -22,41 +23,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class IOGPGraphReassigner {
 
-    class CollectEdgeCountersCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.iogp_fennel_call> {
-        ByteBuffer src;
-        int finished;
-        JMP jmp;
-
-        public CollectEdgeCountersCallback(ByteBuffer s, int f, JMP j) {
-            src = s;
-            finished = f;
-            jmp = j;
-        }
-
-        @Override
-        public void onComplete(TGraphFSServer.AsyncClient.iogp_fennel_call t) {
-            AtomicInteger broadcast = broadcasts.get(src);
-            final Condition broadcast_finish = broadcast_finishes.get(src);
-
-            lock.lock();
-            try {
-                fennel_score[finished] = t.getResult();
-                if (broadcast.decrementAndGet() == 0) {
-                    broadcast_finish.signal();
-                    jmp.v = true;
-                }
-            } catch (TException e) {
-                e.printStackTrace();
-            } finally {
-                lock.unlock();
-            }
-        }
-
-        @Override
-        public void onError(Exception e) {
-            GLogger.info("[%d] On Error", inst.getLocalIdx());
-        }
-    }
 
     public IOGPSrv inst;
     final Lock lock = new ReentrantLock();
@@ -95,11 +61,21 @@ public class IOGPGraphReassigner {
         long start = System.currentTimeMillis();
 
         for (int i = 0; i < inst.serverNum; i++) {
-            TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
             try {
+                TGraphFSServer.Client client = inst.getClientConn(i);
                 if (i != inst.getLocalIdx()) {
-                    AsyncMethodCallback amcb = new CollectEdgeCountersCallback(src, i, jmp);
-                    aclient.iogp_fennel(src, amcb);
+                    fennel_score[i] = client.iogp_fennel(src);
+
+                    lock.lock();
+                    try {
+                        if (broadcast.decrementAndGet() == 0) {
+                            broadcast_finish.signal();
+                            jmp.v = true;
+                        }
+                    } finally {
+                        lock.unlock();
+                    }
+
                 } else {
                     lock.lock();
                     try {
@@ -111,9 +87,11 @@ public class IOGPGraphReassigner {
                         lock.unlock();
                     }
                 }
+                inst.releaseClientConn(i, client);
             } catch (TException e) {
                 e.printStackTrace();
             }
+
         }
 
         lock.lock();
@@ -123,7 +101,6 @@ public class IOGPGraphReassigner {
         } finally {
             lock.unlock();
         }
-
 
         GLogger.info("[%d] Get Fennel Score From %d Servers Cost: %d",
                 inst.getLocalIdx(), inst.serverNum, System.currentTimeMillis() - start);
@@ -172,6 +149,7 @@ public class IOGPGraphReassigner {
             synchronized (targetClient) {
                 targetClient.iogp_reassign(src, c.reassign_times, target);
             }
+            inst.releaseClientConn(target, targetClient);
 
             TGraphFSServer.Client hashClient = inst.getClientConn(hash_loc);
             synchronized (hashClient) {
@@ -180,6 +158,8 @@ public class IOGPGraphReassigner {
                 else
                     inst.handler.iogp_reassign(src, 0, target);
             }
+            inst.releaseClientConn(hash_loc, hashClient);
+
         } catch (TException e) {
             e.printStackTrace();
         }
@@ -219,6 +199,7 @@ public class IOGPGraphReassigner {
                 //		inst.getLocalIdx(), target, client.toString());
                 client.batch_insert(kvs, 1);
             }
+            inst.releaseClientConn(target, client);
 
         } catch (TException e) {
             e.printStackTrace();

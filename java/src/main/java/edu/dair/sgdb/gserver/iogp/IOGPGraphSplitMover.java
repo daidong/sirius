@@ -34,35 +34,6 @@ public class IOGPGraphSplitMover {
         }
     }
 
-    class SplitBroadCastCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.iogp_split_call> {
-        int finished;
-        ByteBuffer src;
-
-        public SplitBroadCastCallback(ByteBuffer s, int f) {
-            src = s;
-            finished = f;
-        }
-
-        @Override
-        public void onComplete(TGraphFSServer.AsyncClient.iogp_split_call t) {
-            AtomicInteger broadcast = broadcasts.get(src);
-            final Condition broadcast_finish = broadcast_finishes.get(src);
-            lock.lock();
-            try {
-                if (broadcast.decrementAndGet() == 0) {
-                    broadcast_finish.signal();
-                }
-            } finally {
-                lock.unlock();
-            }
-        }
-
-        @Override
-        public void onError(Exception e) {
-
-        }
-    }
-
     public IOGPSrv inst;
     LinkedBlockingQueue<Task> taskQueues[];
     final Lock lock = new ReentrantLock();
@@ -93,11 +64,13 @@ public class IOGPGraphSplitMover {
         final Condition broadcast_finish = broadcast_finishes.get(src);
 
         for (int i = 0; i < inst.serverNum; i++) {
-            TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConnWithPool(i);
             try {
+                TGraphFSServer.Client client = inst.getClientConn(i);
                 if (i != inst.getLocalIdx()) {
-                    AsyncMethodCallback amcb = new SplitBroadCastCallback(src, i);
-                    aclient.iogp_split(src, amcb);
+                    client.iogp_split(src);
+                    if (broadcast.decrementAndGet() == 0) {
+                        broadcast_finish.signal();
+                    }
                 }
                 else {
                     inst.handler.iogp_split(src);
@@ -105,6 +78,7 @@ public class IOGPGraphSplitMover {
                         jump = true;
                     }
                 }
+                inst.releaseClientConn(i, client);
             } catch (TException e) {
                 e.printStackTrace();
             }

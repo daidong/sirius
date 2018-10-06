@@ -46,6 +46,7 @@ public class AsyncTravelWorker implements Runnable {
                 synchronized (client) {
                     client.travelReg(tc);
                 }
+                instance.releaseClientConn(sid, client);
                 repeated = Constants.RETRY;
             } catch (TException e) {
                 repeated += 1;
@@ -62,6 +63,7 @@ public class AsyncTravelWorker implements Runnable {
                 synchronized (client) {
                     client.travelFin(tc);
                 }
+                instance.releaseClientConn(sid, client);
                 repeated = Constants.RETRY;
             } catch (TException e) {
                 repeated += 1;
@@ -78,6 +80,7 @@ public class AsyncTravelWorker implements Runnable {
                 synchronized (client) {
                     client.travelRtn(tc);
                 }
+                instance.releaseClientConn(sid, client);
                 repeated = Constants.RETRY;
             } catch (TException e) {
                 repeated += 1;
@@ -100,6 +103,7 @@ public class AsyncTravelWorker implements Runnable {
                     synchronized (client) {
                         client.travel(tc);
                     }
+                    instance.releaseClientConn(sid, client);
                 }
                 repeated = Constants.RETRY;
             } catch (TException e) {

@@ -2,6 +2,8 @@ package edu.dair.sgdb.utils;
 
 public class Constants {
 
+    public static final int WORKER_THREAD_FACTOR = 10;
+
     public static final int THRIFT_POOL_SIZE = 128;
     public static final int Count_Threshold = 128;
     public static final int Threshold = 4096;

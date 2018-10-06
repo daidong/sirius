@@ -76,18 +76,12 @@ public class SyncTravelVertexWorker implements Runnable {
             }
             tc.setVals(vals);
             try {
-                TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
+                TGraphFSServer.Client client = instance.getClientConn(replyTo);
                 GLogger.info("%d Send TravelRtn to %d at %d",
                         instance.getLocalIdx(), replyTo, System.nanoTime());
 
                 client.syncTravelRtn(tc);
-                /*
-                Client client = inst.getClientConn(replyTo);
-                synchronized (client) {
-                    GLogger.info("S TR %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
-                    client.syncTravelRtn(tc);
-                }
-                */
+                instance.releaseClientConn(replyTo, client);
             } catch (TException e) {
                 e.printStackTrace();
             }
@@ -117,18 +111,11 @@ public class SyncTravelVertexWorker implements Runnable {
                     .setSub_type(1);
 
             try {
-                TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
+                TGraphFSServer.Client client = instance.getClientConn(replyTo);
                 GLogger.info("%d Send TraveExtend to %d including %s at %d",
                         instance.getLocalIdx(), replyTo, addrs, System.nanoTime());
-
                 client.syncTravelExtend(tc_ext);
-                /*
-                Client client = inst.getClientConn(replyTo);
-                synchronized (client) {
-                    GLogger.info("S TE %d %d %d", inst.getLocalIdx(), replyTo, System.nanoTime());
-                    client.syncTravelExtend(tc_ext);
-                }
-                */
+                instance.releaseClientConn(replyTo, client);
             } catch (TException e) {
                 e.printStackTrace();
             }
@@ -161,38 +148,16 @@ public class SyncTravelVertexWorker implements Runnable {
                     GLogger.info("%d Send Travel Command to %d for the edges at %d",
                             instance.getLocalIdx(), s, System.nanoTime());
 
-                    TGraphFSServer.AsyncClient aclient = instance.getAsyncClientConnWithPool(s);
-                    AsyncMethodCallback amcb = new BroadCastTVCallback(s);
-                    aclient.syncTravel(tc1, amcb);
-                    /*
-                    TGraphFSServer.AsyncClient aclient = inst.getAsyncClientConn(s);
-                    synchronized (aclient) {
-                        aclient.syncTravel(tc1, new BroadCastTVCallback(s));
-                    }
-                    */
+                    TGraphFSServer.Client client = instance.getClientConn(s);
+                    client.syncTravel(tc1);
+                    instance.releaseClientConn(s, client);
                 } catch (TException te) {
                     GLogger.error("SyncTravelVertexWorker Error");
                 }
-            }
-        }
-        //System.out.println("One Round of SyncStart costs: " + (System.currentTimeMillis() - syncStartAt));
-    }
 
-    class BroadCastTVCallback implements AsyncMethodCallback<TGraphFSServer.AsyncClient.syncTravel_call> {
-
-        int finished;
-
-        public BroadCastTVCallback(int f) {
-            this.finished = f;
-        }
-
-        @Override
-        public void onComplete(TGraphFSServer.AsyncClient.syncTravel_call t) {
-            synchronized (targets) {
-                targets.remove(this.finished);
-
+                targets.remove(s);
                 GLogger.debug("[%d] VertexBroadcastTVCallback Complete sending %d, %s not finish yet",
-                        instance.getLocalIdx(), this.finished, targets);
+                        instance.getLocalIdx(), s, targets);
 
                 if (targets.isEmpty()) { //finish all sends, send SYNC_TRAVEL_FINISH Command
 
@@ -207,12 +172,12 @@ public class SyncTravelVertexWorker implements Runnable {
                             .setSub_type(0); //finish on vertex
 
                     try {
-                        TGraphFSServer.Client client = instance.getClientConnWithPool(replyTo);
+                        TGraphFSServer.Client client = instance.getClientConn(replyTo);
                         GLogger.info("%d Send TravelFinish to %d at %d finish on vertices",
                                 instance.getLocalIdx(),
                                 replyTo, System.nanoTime());
-
                         client.syncTravelFinish(tc3);
+                        instance.releaseClientConn(replyTo, client);
 
                     } catch (TException e) {
                         e.printStackTrace();
@@ -221,11 +186,5 @@ public class SyncTravelVertexWorker implements Runnable {
                 }
             }
         }
-
-        @Override
-        public void onError(Exception excptn) {
-            GLogger.error("SyncTravelVertexWorker BroadCastTVCallback Error: %s", excptn.getMessage());
-        }
-
     }
 }

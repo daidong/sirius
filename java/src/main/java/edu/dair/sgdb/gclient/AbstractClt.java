@@ -25,7 +25,6 @@ import java.util.List;
 public abstract class AbstractClt {
 
     public TGraphFSServer.Client[] conns;
-    public TGraphFSServer.AsyncClient[] asyncClients;
 
     public ArrayList<String> allSrvs;
     public int port;
@@ -36,7 +35,6 @@ public abstract class AbstractClt {
         this.port = port;
         this.serverNum = allSrvs.size();
         this.conns = new TGraphFSServer.Client[this.serverNum];
-        this.asyncClients = new TGraphFSServer.AsyncClient[this.serverNum];
 
         for (int i = 0; i < this.serverNum; i++) {
             String addrPort = this.allSrvs.get(i);
@@ -55,14 +53,6 @@ public abstract class AbstractClt {
             TProtocol protocol = new TBinaryProtocol(transport);
             TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
             conns[i] = client;
-
-            try {
-                asyncClients[i] = new TGraphFSServer.AsyncClient(new TBinaryProtocol.Factory(),
-                        new TAsyncClientManager(),
-                        new TNonblockingSocket(addr, this.port));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
 
     }
@@ -71,9 +61,6 @@ public abstract class AbstractClt {
         return conns[target];
     }
 
-    public synchronized TGraphFSServer.AsyncClient getAsyncClientConn(int target) throws TTransportException {
-        return asyncClients[target];
-    }
 
     abstract public List<KeyValue> read(byte[] srcVertex, EdgeType edgeType, byte[] dstKey) throws TException;
 

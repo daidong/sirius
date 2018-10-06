@@ -237,6 +237,8 @@ public class DIDOHandler extends BaseHandler {
                     GLogger.info("[%d] Send Split Command Exception", instance.getLocalIdx());
                 }
 
+                instance.releaseClientConn(new_server, targetServer);
+                instance.releaseClientConn(vertexRootServer, rootServer);
                 instance.workerPool.execute(new SplitWorker(instance, bsrc, vid, new_index, new_server, new_vid));
             }
         }
@@ -336,6 +338,7 @@ public class DIDOHandler extends BaseHandler {
                 synchronized (target) {
                     target.giga_split(ByteBuffer.wrap(src), newVid, Constants.SPLIT_END, null);
                 }
+                instance.releaseClientConn(server, target);
             } catch (TException e) {
                 e.printStackTrace();
             }
