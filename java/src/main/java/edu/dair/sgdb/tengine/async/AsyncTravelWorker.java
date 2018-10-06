@@ -1,6 +1,8 @@
-package edu.dair.sgdb.tengine;
+package edu.dair.sgdb.tengine.async;
 
 import edu.dair.sgdb.gserver.AbstractSrv;
+import edu.dair.sgdb.tengine.TravelLocalReader;
+import edu.dair.sgdb.tengine.travel.JSONCommand;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.Constants;

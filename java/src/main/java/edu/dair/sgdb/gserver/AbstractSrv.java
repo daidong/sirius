@@ -93,28 +93,35 @@ public abstract class AbstractSrv {
 
     public TGraphFSServer.Client getClientConn(int target) throws TTransportException {
 
-        if (!this.clientPools.containsKey(target))
-            this.clientPools.put(target, new ConcurrentLinkedQueue<TGraphFSServer.Client>());
+        synchronized (this.clientPools) {
+            if (!this.clientPools.containsKey(target))
+                this.clientPools.put(target, new ConcurrentLinkedQueue<TGraphFSServer.Client>());
+        }
 
-        if (this.clientPools.get(target).isEmpty()){
-            String addrPort = this.getAllSrvs().get(target);
-            String taddr = addrPort.split(":")[0];
-            int tport = Integer.parseInt(addrPort.split(":")[1]);
-            TTransport transport = new TFramedTransport(new TSocket(taddr, tport), 1024 * 1024 * 1024);
-            transport.open();
-            TProtocol protocol = new TBinaryProtocol(transport);
-            TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
-            return client;
-        } else {
-            TGraphFSServer.Client client = this.clientPools.get(target).poll(); //retrieve and remove the first element
-            return client;
+        ConcurrentLinkedQueue<TGraphFSServer.Client> pool = this.clientPools.get(target);
+
+        synchronized (pool) {
+            if (pool.isEmpty()) {
+                String addrPort = this.getAllSrvs().get(target);
+                String taddr = addrPort.split(":")[0];
+                int tport = Integer.parseInt(addrPort.split(":")[1]);
+                TTransport transport = new TFramedTransport(new TSocket(taddr, tport), 1024 * 1024 * 1024);
+                transport.open();
+                TProtocol protocol = new TBinaryProtocol(transport);
+                TGraphFSServer.Client client = new TGraphFSServer.Client(protocol);
+                return client;
+            } else {
+                TGraphFSServer.Client client = pool.poll(); //retrieve and remove the first element
+                return client;
+            }
         }
     }
 
     public boolean releaseClientConn(int target, TGraphFSServer.Client c){
-        if (!this.clientPools.containsKey(target))
-            System.out.println("Releasing Client Connection Error");
-        this.clientPools.get(target).add(c);
+        ConcurrentLinkedQueue<TGraphFSServer.Client> pool = this.clientPools.get(target);
+        synchronized (pool) {
+            pool.add(c);
+        }
         return true;
     }
 

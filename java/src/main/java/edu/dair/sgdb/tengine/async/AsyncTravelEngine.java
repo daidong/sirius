@@ -1,10 +1,7 @@
-package edu.dair.sgdb.tengine;
+package edu.dair.sgdb.tengine.async;
 
 import edu.dair.sgdb.gserver.AbstractSrv;
-import edu.dair.sgdb.tengine.travel.Restriction;
-import edu.dair.sgdb.tengine.travel.SingleStep;
-import edu.dair.sgdb.tengine.travel.TravelDescriptor;
-import edu.dair.sgdb.tengine.travel.Triple;
+import edu.dair.sgdb.tengine.travel.*;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.GLogger;
 import org.apache.thrift.TException;
@@ -376,7 +373,7 @@ public class AsyncTravelEngine {
             try {
                 lock.wait();
             } catch (InterruptedException ex) {
-                Logger.getLogger(SyncTravelEngine.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(AsyncTravelEngine.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
 

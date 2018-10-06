@@ -1,7 +1,7 @@
 package edu.dair.sgdb.gserver.edgecut;
 
 import edu.dair.sgdb.sengine.DBKey;
-import edu.dair.sgdb.tengine.SyncTravelEngine;
+import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.Constants;

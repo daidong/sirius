@@ -1,4 +1,4 @@
-package edu.dair.sgdb.tengine;
+package edu.dair.sgdb.tengine.async;
 
 import edu.dair.sgdb.tengine.travel.TravelDescriptor;
 import edu.dair.sgdb.tengine.travel.Triple;

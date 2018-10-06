@@ -3,7 +3,7 @@ package edu.dair.sgdb.tengine.prefetch;
 import edu.dair.sgdb.gserver.AbstractSrv;
 import edu.dair.sgdb.sengine.DBKey;
 import edu.dair.sgdb.sengine.OrderedRocksDBAPI;
-import edu.dair.sgdb.tengine.SyncTravelEngine;
+import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.tengine.travel.Restriction;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.thrift.KeyValue;

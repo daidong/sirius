@@ -2,10 +2,9 @@ package edu.dair.sgdb.gserver.dido;
 
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.partitioner.DIDOIndex;
-import edu.dair.sgdb.partitioner.GigaIndex;
 import edu.dair.sgdb.sengine.DBKey;
-import edu.dair.sgdb.tengine.AsyncTravelEngine;
-import edu.dair.sgdb.tengine.SyncTravelEngine;
+import edu.dair.sgdb.tengine.async.AsyncTravelEngine;
+import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.Constants;
 import edu.dair.sgdb.utils.GLogger;
@@ -16,7 +15,6 @@ import org.apache.thrift.TException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 
 public class DIDOHandler extends BaseHandler {

@@ -1,6 +1,5 @@
 package edu.dair.sgdb.tengine.travel;
 
-import edu.dair.sgdb.tengine.JSONCommand;
 import org.json.simple.JSONObject;
 
 import java.util.Map;

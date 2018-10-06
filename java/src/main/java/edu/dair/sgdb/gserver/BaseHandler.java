@@ -1,7 +1,7 @@
 package edu.dair.sgdb.gserver;
 
-import edu.dair.sgdb.tengine.AsyncTravelEngine;
-import edu.dair.sgdb.tengine.SyncTravelEngine;
+import edu.dair.sgdb.tengine.async.AsyncTravelEngine;
+import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.JenkinsHash;
 
@@ -9,7 +9,6 @@ import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 /**
  * @author daidong

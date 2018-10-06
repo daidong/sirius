@@ -1,5 +1,6 @@
-package edu.dair.sgdb.tengine;
+package edu.dair.sgdb.tengine.sync;
 
+import edu.dair.sgdb.tengine.TravelLocalReader;
 import edu.dair.sgdb.tengine.travel.SingleRestriction;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.gserver.AbstractSrv;
@@ -9,7 +10,6 @@ import edu.dair.sgdb.thrift.TravelCommandType;
 import edu.dair.sgdb.utils.GLogger;
 import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
-import org.apache.thrift.async.AsyncMethodCallback;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -49,7 +49,7 @@ public class SyncTravelEdgeWorker implements Runnable {
         GLogger.info("Server [%d] Start Read Edges for stepId [%d], Command from %d",
                 instance.getLocalIdx(), stepId, getFrom);
 
-        ArrayList<SingleStep> travelPlan = engine.getSyncTravelPlan(travelId);
+        ArrayList<SingleStep> travelPlan = engine.get_sync_travel_plan(travelId);
         SingleStep currStep = travelPlan.get(stepId);
 
         ArrayList<byte[]> passedVertices = new ArrayList<>();
@@ -131,7 +131,7 @@ public class SyncTravelEdgeWorker implements Runnable {
 
             travelPlan.get(stepId + 1).vertexKeyRestrict
                     = new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
-            String travelPayLoad = engine.serializeTravelPlan(travelPlan);
+            String travelPayLoad = engine.gen_json_string_from_travel_plan(travelPlan);
 
             TravelCommand tc2 = new TravelCommand();
             tc2.setType(TravelCommandType.SYNC_TRAVEL)

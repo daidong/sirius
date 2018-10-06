@@ -1,5 +1,6 @@
-package edu.dair.sgdb.tengine;
+package edu.dair.sgdb.tengine.sync;
 
+import edu.dair.sgdb.tengine.TravelLocalReader;
 import edu.dair.sgdb.tengine.travel.SingleRestriction;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.gserver.AbstractSrv;
@@ -11,7 +12,6 @@ import edu.dair.sgdb.thrift.TravelCommandType;
 import edu.dair.sgdb.utils.GLogger;
 import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
-import org.apache.thrift.async.AsyncMethodCallback;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -42,7 +42,7 @@ public class SyncTravelVertexWorker implements Runnable {
     @Override
     public void run() {
         boolean lastStep = false;
-        ArrayList<SingleStep> travelPlan = engine.getSyncTravelPlan(travelId);
+        ArrayList<SingleStep> travelPlan = engine.get_sync_travel_plan(travelId);
         SingleStep currStep = travelPlan.get(stepId);
         if (stepId == (travelPlan.size() - 1)) {
             lastStep = true;
@@ -53,7 +53,7 @@ public class SyncTravelVertexWorker implements Runnable {
                 instance.getLocalIdx(), stepId, System.nanoTime());
         /*
         ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(this.inst.localStore,
-                engine.getSyncTravelVertices(this.travelId, this.stepId), currStep, ts);
+                engine.get_vertex_of_step(this.travelId, this.stepId), currStep, ts);
         */
         ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(
                 this.instance.localStore,
@@ -131,7 +131,7 @@ public class SyncTravelVertexWorker implements Runnable {
 
                 travelPlan.get(stepId).vertexKeyRestrict =
                         new SingleRestriction.InWithValues("key".getBytes(), nextKeys);
-                String travelPayLoad = engine.serializeTravelPlan(travelPlan);
+                String travelPayLoad = engine.gen_json_string_from_travel_plan(travelPlan);
 
                 TravelCommand tc1 = new TravelCommand();
                 tc1.setType(TravelCommandType.SYNC_TRAVEL)

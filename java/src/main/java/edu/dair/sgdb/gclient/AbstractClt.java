@@ -1,7 +1,7 @@
 package edu.dair.sgdb.gclient;
 
 import edu.dair.sgdb.gserver.EdgeType;
-import edu.dair.sgdb.tengine.JSONCommand;
+import edu.dair.sgdb.tengine.travel.JSONCommand;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.thrift.KeyValue;
 import edu.dair.sgdb.thrift.TGraphFSServer;
