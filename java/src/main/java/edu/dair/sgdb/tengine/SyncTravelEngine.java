@@ -27,6 +27,7 @@ public class SyncTravelEngine {
 
     private AbstractSrv instance;
     public ConcurrentHashMap<Long, SyncTravelStatus> travel_status;
+    public HashMap<Long, Object> locks;
     public HashMap<Long, byte[]> tsrcs;
     public AtomicInteger mid;
     public PreLoadMemoryPool pool;
@@ -34,6 +35,7 @@ public class SyncTravelEngine {
     public SyncTravelEngine(AbstractSrv s) {
         this.instance = s;
         this.travel_status = new ConcurrentHashMap<>();
+        this.locks = new HashMap<Long, Object>();
         this.tsrcs = new HashMap<>();
         this.mid = new AtomicInteger(1);
         this.pool = new PreLoadMemoryPool();
@@ -192,6 +194,7 @@ public class SyncTravelEngine {
         long travelId = (long) this.mid.incrementAndGet()
                          + ((long) (instance.getLocalIdx() + 1) * (1L << 32));
         startSyncTravelTime(travelId);
+        this.locks.put(travelId, new Object());
 
         GLogger.info("%d Recieve TravelMaster From %d At %d",
                 instance.getLocalIdx(), -1, System.nanoTime());
@@ -280,6 +283,14 @@ public class SyncTravelEngine {
                 instance.releaseClientConn(s, client);
             } else {
                 syncTravelStart(tc1);
+            }
+        }
+
+        Object lock = this.locks.get(travelId);
+        synchronized (lock) {
+            try {
+                lock.wait();
+            } catch (InterruptedException ex) {
             }
         }
 
@@ -394,6 +405,11 @@ public class SyncTravelEngine {
                     new String(this.tsrcs.get(travelId)),
                     costTime);
             instance.workerPool.execute(new DeleteTravelInstance(instance, travelId));
+        }
+
+        Object lock = this.locks.get(travelId);
+        synchronized (lock) {
+            lock.notify();
         }
 
         return 0;
@@ -519,11 +535,15 @@ public class SyncTravelEngine {
                         instance.getLocalIdx(), travelId,
                         new String(this.tsrcs.get(travelId)),
                         costTime);
+
+                Object lock = this.locks.get(travelId);
+                synchronized (lock) {
+                    lock.notify();
+                }
             }
         }
 
         return 0;
     }
-
 
 }
