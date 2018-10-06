@@ -301,7 +301,7 @@ public class ClientMain {
 
                 byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
 
-                for (int steps = 2; steps <= 8; steps += 2) {
+                for (int steps = 8; steps <= 8; steps += 2) {
 
                     start = System.currentTimeMillis();
 
@@ -319,7 +319,7 @@ public class ClientMain {
                 }
 
                 break;
-                
+
             default:
                 System.out.println("Undefined Op!");
 
