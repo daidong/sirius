@@ -50,4 +50,4 @@ do
     line=`expr 1 + $line`
 done
 
-~/simplegdb-code/release/simplegdb-0.1/bin/client.sh -type ${server_type} -op $op -id $id -graph ${graph_file} -srvlist $seeds
+~/simplegdb-code/release/sgdb-0.1/bin/client.sh -type ${server_type} -op $op -id $id -graph ${graph_file} -srvlist $seeds
