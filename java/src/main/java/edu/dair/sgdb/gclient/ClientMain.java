@@ -320,6 +320,31 @@ public class ClientMain {
 
                 break;
 
+            case "onlytravel":
+
+                client.sync();
+
+                System.out.println("Start Travel " + id);
+
+                byte[] edge = ArrayPrimitives.itob(EdgeType.OUT.get());
+
+                for (int steps = 2; steps <= 8; steps += 2) {
+
+                    start = System.currentTimeMillis();
+
+                    GTravel gt = new GTravel();
+                    gt.v((id).getBytes());
+                    for (int i = 0; i < steps; i++) {
+                        gt.et(edge).next();
+                    }
+                    gt.v();
+
+                    client.submitSyncTravel(gt.plan());
+                    GLogger.info("Client Travel [%d] Steps from VID[%s] cost %d.",
+                            steps, id, (System.currentTimeMillis() - start));
+
+                }
+
             default:
                 System.out.println("Undefined Op!");
 
