@@ -29,6 +29,15 @@ if [ "UPDATE" = $2 ]; then
 	done
 fi
 
+# CLEAN
+if [ "CLEAN" = $2 ]; then
+	for i in $(seq 0 $bound)
+	do
+    	echo CLEAN Node$i
+    	ssh node$i "cd ~/simplegdb-Java; make clean" &
+	done
+fi
+
 # UPDATE and COMPILE
 if [ "UPDATE-COMPILE" = $2 ]; then
 	for i in $(seq 0 $bound)
