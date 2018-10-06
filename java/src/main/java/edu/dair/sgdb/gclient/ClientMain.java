@@ -151,6 +151,15 @@ public class ClientMain {
             case "iogp":
                 client = new IOGPClt(0, allsrvs);
                 break;
+            case "giga":
+                client = new GIGAClt(0, allsrvs);
+                break;
+            case "dido":
+                client = new DIDOClt(0, allsrvs);
+                break;
+            case "vertexcut":
+                client = new VertexCutClt(0, allsrvs);
+                break;            
             default:
                 System.out.println("Undefined Client Type!");
                 break;
@@ -170,7 +179,6 @@ public class ClientMain {
         switch (op) {
 
             case "insert":
-
                 br = new BufferedReader(new FileReader(graphFile));
                 start = System.currentTimeMillis();
                 while ((line = br.readLine()) != null) {
