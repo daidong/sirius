@@ -52,7 +52,7 @@ public class SyncTravelPreFetcher {
 
                     for (ByteBuffer bkey : vertices) {
 
-                        if (engine.isStepStarted(travelId, (currStepId + 1))) {
+                        if (engine.is_travel_step_started(travelId, (currStepId + 1))) {
                             return;
                         }
 
