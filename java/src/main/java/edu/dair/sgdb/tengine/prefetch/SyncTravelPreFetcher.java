@@ -32,8 +32,7 @@ public class SyncTravelPreFetcher {
 
         @Override
         public void run() {
-            int tid = engine.mid.addAndGet(1);
-            GLogger.debug("S PL %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+            GLogger.debug("S PL %d %d %d", instance.getLocalIdx(), 0, System.nanoTime());
 
             try {
                 SingleStep preload = plans.get(currStepId + 1);
@@ -103,7 +102,7 @@ public class SyncTravelPreFetcher {
                  */
             } finally {
                 //GLogger.warn("Cached: %d", engine.pool.getCachedItemNumber());
-                GLogger.info("R PL %d %d %d", instance.getLocalIdx(), tid, System.nanoTime());
+                GLogger.info("R PL %d %d %d", instance.getLocalIdx(), 0, System.nanoTime());
             }
         }
     }
