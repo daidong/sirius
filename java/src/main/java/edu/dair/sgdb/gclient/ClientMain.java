@@ -266,7 +266,7 @@ public class ClientMain {
             case "travel":
                 /*
                     First, Insert all edges.
-                 */
+
                 br = new BufferedReader(new FileReader(graphFile));
                 start = System.currentTimeMillis();
                 int line_num = 0;
@@ -294,18 +294,19 @@ public class ClientMain {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
+                    */
                 client.sync();
-                System.out.println("Start Travel " + id);
+                long start_travel = System.currentTimeMillis();
+                GLogger.info("Start Travel on vertex %s", id);
                 byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
                 GTravel gt = new GTravel();
                 gt.v((id).getBytes());
-                for (int i = 0; i < 8; i++) {
+                for (int i = 0; i < 10; i++) {
                     gt.et(bEdge).next();
                 }
                 gt.v();
-                int time = client.bfs_travel(gt.plan());
-                GLogger.info("bfs takes: %d ms", time);
+                client.bfs_travel(gt.plan());
+                GLogger.info("bfs takes: %d ms", System.currentTimeMillis() - start_travel);
                 break;
 
             default:

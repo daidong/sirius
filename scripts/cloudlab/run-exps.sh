@@ -11,3 +11,5 @@
 /users/dirruncc/simplegdb-Java/scripts/cloudlab/StopServer.sh -n 3
 
 ~/simplegdb-Java/scripts/cloudlab/ClientOps.sh -n 3 -t edgecut -o travel -c 0 -g /proj/dirr-PG0/datasets/p2p-Gnutella04.txt
+
+~/Documents/gitrepos/simplegdb-Java/scripts/cloudlab/ClientOps.sh -n 3 -t edgecut -o travel -c 0 -g ~/Documents/p2p-Gnutella04.txt

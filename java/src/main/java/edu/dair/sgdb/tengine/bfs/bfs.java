@@ -21,12 +21,12 @@ public class bfs {
 
     private AbstractSrv instance;
     HashMap<Long, HashSet<ByteBuffer>> vertices_to_travel = null;
-    Lock alock = null;
+    Lock vertices_to_travel_lock = null;
 
     public bfs(AbstractSrv inst){
         this.instance = inst;
         this.vertices_to_travel = new HashMap<>();
-        this.alock = new ReentrantLock();
+        this.vertices_to_travel_lock = new ReentrantLock();
     }
 
     private class lock_and_wait{
@@ -59,7 +59,7 @@ public class bfs {
             if (pendings == 0){
                 a_cond.signal();
             }
-            alock.unlock();
+            a_lock.unlock();
         }
 
         public void lock(){
@@ -86,10 +86,12 @@ public class bfs {
             rpc_sync_travel_vertices(s, tid, current_step, keys_set, payload);
         }
 
-        Set<Integer> servers_list_2 = servers_store_keys_next_step.keySet();
+        Set<Integer> servers_list_2 = new HashSet<>(servers_store_keys_next_step.keySet());
 
 
-        while (current_step <= travelPlan.size()){
+        while (current_step < travelPlan.size()){
+            System.out.println("start step " + current_step);
+
             Set<Integer> servers_list_1 = new HashSet<>(servers_list_2);
             servers_list_2.clear();
 
@@ -104,20 +106,21 @@ public class bfs {
             }
 
             lw.wait_until_finish();
-
+            System.out.println("finish step " + current_step);
             current_step += 1;
         }
 
         int travel_time = (int) (System.currentTimeMillis() - bfs_start);
+        System.out.println("travel time: " + travel_time);
         return travel_time;
     }
 
     public int travel_vertices(long tid, int sid, Set<ByteBuffer> keys, String payload){
-        alock.lock();
+        vertices_to_travel_lock.lock();
         if (!this.vertices_to_travel.containsKey(tid))
             this.vertices_to_travel.put(tid, new HashSet<ByteBuffer>());
         this.vertices_to_travel.get(tid).addAll(keys);
-        alock.unlock();
+        vertices_to_travel_lock.unlock();
         return 0;
     }
 
@@ -156,7 +159,7 @@ public class bfs {
             }
         }
 
-        Set<Integer> edge_servers = edges_and_servers.keySet();
+        Set<Integer> edge_servers = new HashSet<>(edges_and_servers.keySet());
 
         int pending_to_finish = edge_servers.size();
         HashSet<ByteBuffer> vertices_for_next_step = new HashSet<>();
@@ -284,9 +287,11 @@ public class bfs {
         public void run() {
             Set<Integer> sets = rpc_sync_travel_start_step(server_id, tid, sid, payload);
 
-            lw.lock();
-            next_servers.addAll(sets);
-            lw.unlock();
+            if (sets != null) {
+                lw.lock();
+                next_servers.addAll(sets);
+                lw.unlock();
+            }
 
             lw.finish_one();
         }
