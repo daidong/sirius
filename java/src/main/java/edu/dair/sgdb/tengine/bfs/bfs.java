@@ -73,7 +73,7 @@ public class bfs {
     public int travel_master(long tid, String payload){
         long bfs_start = System.currentTimeMillis();
 
-        this.vertices_to_travel.putIfAbsent(tid, new HashSet<ByteBuffer>());
+        this.vertices_to_travel.put(tid, new HashSet<ByteBuffer>());
         ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
         int master = instance.getLocalIdx();
         int current_step = 0;
@@ -114,7 +114,8 @@ public class bfs {
 
     public int travel_vertices(long tid, int sid, Set<ByteBuffer> keys, String payload){
         alock.lock();
-        this.vertices_to_travel.putIfAbsent(tid, new HashSet<ByteBuffer>());
+        if (!this.vertices_to_travel.containsKey(tid))
+            this.vertices_to_travel.put(tid, new HashSet<ByteBuffer>());
         this.vertices_to_travel.get(tid).addAll(keys);
         alock.unlock();
         return 0;
@@ -149,7 +150,8 @@ public class bfs {
         for (byte[] v : passedVertices){
             Set<Integer> srvs = instance.getEdgeLocs(v);
             for (int s : srvs){
-                edges_and_servers.putIfAbsent(s, new HashSet<>());
+                if (!edges_and_servers.containsKey(s))
+                    edges_and_servers.put(s, new HashSet<ByteBuffer>());
                 edges_and_servers.get(s).add(ByteBuffer.wrap(v));
             }
         }
@@ -320,7 +322,8 @@ public class bfs {
         for (byte[] key : keySet) {
             Set<Integer> servers = instance.getVertexLoc(key);
             for (int s : servers) {
-                perServerVertices.putIfAbsent(s, new HashSet<>());
+                if (!perServerVertices.containsKey(s))
+                    perServerVertices.put(s, new HashSet<ByteBuffer>());
                 perServerVertices.get(s).add(ByteBuffer.wrap(key));
             }
         }
@@ -333,7 +336,8 @@ public class bfs {
             byte[] key = NIOHelper.getActiveArray(bkey);
             Set<Integer> servers = instance.getVertexLoc(key);
             for (int s : servers) {
-                perServerVertices.putIfAbsent(s, new HashSet<>());
+                if (!perServerVertices.containsKey(s))
+                    perServerVertices.put(s, new HashSet<ByteBuffer>());
                 perServerVertices.get(s).add(ByteBuffer.wrap(key));
             }
         }
