@@ -3,6 +3,7 @@ package edu.dair.sgdb.gserver.giga;
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.partitioner.GigaIndex;
 import edu.dair.sgdb.sengine.DBKey;
+import edu.dair.sgdb.tengine.bfs.bfs;
 import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.Constants;
@@ -22,6 +23,7 @@ public class AsyncGigaHandler extends BaseHandler {
 
     public AsyncGigaHandler(GIGASrv s) {
         this.instance = s;
+        this.bfs_engine = new bfs(s);
         this.syncEngine = new SyncTravelEngine(s);
         //this.asyncEngine = new AsyncTravelEngine(s);
     }

@@ -1,6 +1,7 @@
 package edu.dair.sgdb.gserver;
 
 import edu.dair.sgdb.tengine.async.AsyncTravelEngine;
+import edu.dair.sgdb.tengine.bfs.bfs;
 import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.thrift.*;
 import edu.dair.sgdb.utils.JenkinsHash;
@@ -9,6 +10,7 @@ import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
 
 import java.nio.ByteBuffer;
+import java.util.Set;
 
 /**
  * @author daidong
@@ -17,6 +19,7 @@ public abstract class BaseHandler implements TGraphFSServer.Iface {
 
     public AsyncTravelEngine asyncEngine = null;
     public SyncTravelEngine syncEngine = null;
+    public bfs bfs_engine = null;
 
     public int echo(int s, ByteBuffer payload) throws TException{
         byte[] load = NIOHelper.getActiveArray(payload);
@@ -80,6 +83,27 @@ public abstract class BaseHandler implements TGraphFSServer.Iface {
         JenkinsHash jh = new JenkinsHash();
         int hashi = Math.abs(jh.hash32(src));
         return (hashi % serverNum);
+    }
+
+
+    @Override
+    public int travel_master(long tid, String payload) throws TException {
+        return bfs_engine.travel_master(tid, payload);
+    }
+
+    @Override
+    public int travel_vertices(long tid, int sid, Set<ByteBuffer> keys, String payload) throws TException {
+        return bfs_engine.travel_vertices(tid, sid, keys, payload);
+    }
+
+    @Override
+    public Set<ByteBuffer> travel_edges(long tid, int sid, Set<ByteBuffer> keys, String payload) throws TException {
+        return bfs_engine.travel_edges(tid, sid, keys, payload);
+    }
+
+    @Override
+    public Set<Integer> travel_start_step(long tid, int sid, String payload) throws TException {
+        return bfs_engine.travel_start_step(tid, sid, payload);
     }
 
 }

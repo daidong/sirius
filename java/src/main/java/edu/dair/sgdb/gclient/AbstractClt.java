@@ -111,6 +111,7 @@ public abstract class AbstractClt {
         return 0;
     }
 
+    /*
     public int submitSyncTravel(List<SingleStep> travelPlan) throws TException {
         long ts = System.currentTimeMillis();
         return submitSyncTravel(travelPlan, ts);
@@ -134,6 +135,24 @@ public abstract class AbstractClt {
                 .setTs(ts).setPayload(jc.genString());
         int serverId = Math.abs((int) tid) % this.serverNum;
         getClientConn(serverId).syncTravelMaster(tc);
+        return 0;
+    }
+    */
+
+    public int bfs_travel(List<SingleStep> travelPlan) throws TException {
+        long ts = System.currentTimeMillis();
+        long travelId = ts;
+
+        JSONArray array = new JSONArray();
+        for (SingleStep ss : travelPlan) {
+            JSONObject jo = new JSONObject();
+            jo.put("value", ss.genJSON());
+            array.add(jo);
+        }
+        JSONCommand jc = new JSONCommand();
+        jc.add("travel_payload", array);
+        int serverId = Math.abs((int) travelId) % this.serverNum;
+        getClientConn(serverId).travel_master(travelId, jc.genString());
         return 0;
     }
 

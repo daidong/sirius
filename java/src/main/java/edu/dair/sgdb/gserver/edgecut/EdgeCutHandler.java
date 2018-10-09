@@ -1,6 +1,7 @@
 package edu.dair.sgdb.gserver.edgecut;
 
 import edu.dair.sgdb.sengine.DBKey;
+import edu.dair.sgdb.tengine.bfs.bfs;
 import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.thrift.*;
@@ -18,6 +19,7 @@ public class EdgeCutHandler extends BaseHandler {
 
     public EdgeCutHandler(EdgeCutSrv s) {
         this.instance = s;
+        this.bfs_engine = new bfs(s);
         this.syncEngine = new SyncTravelEngine(s);
     }
 

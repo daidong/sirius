@@ -290,34 +290,22 @@ public class ClientMain {
                 GLogger.info("Insert time: %d", (System.currentTimeMillis() - start));
 
                 try {
-                    Thread.sleep(30000);
+                    Thread.sleep(300);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
                 client.sync();
-
                 System.out.println("Start Travel " + id);
-
                 byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
-
-                for (int steps = 8; steps <= 8; steps += 2) {
-
-                    start = System.currentTimeMillis();
-
-                    GTravel gt = new GTravel();
-                    gt.v((id).getBytes());
-                    for (int i = 0; i < steps; i++) {
-                        gt.et(bEdge).next();
-                    }
-                    gt.v();
-
-                    client.submitSyncTravel(gt.plan());
-                    GLogger.info("Client Travel [%d] Steps from VID[%s] cost %d.",
-                            steps, id, (System.currentTimeMillis() - start));
-
+                GTravel gt = new GTravel();
+                gt.v((id).getBytes());
+                for (int i = 0; i < 8; i++) {
+                    gt.et(bEdge).next();
                 }
-
+                gt.v();
+                int time = client.bfs_travel(gt.plan());
+                GLogger.info("bfs takes: %d ms", time);
                 break;
 
             default:

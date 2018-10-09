@@ -114,4 +114,9 @@ service TGraphFSServer {
     i32 syncTravelFinish(1:TravelCommand tc),
     i32 deleteSyncTravelInstance(1:TravelCommand tc),
 
+    i32 travel_master(1:i64 tid, 2:string payload),
+    i32 travel_vertices(1:i64 tid, 2:i32 sid, 3:set<binary> keys, 4:string payload),
+    set<binary> travel_edges(1:i64 tid, 2:i32 sid, 3:set<binary> keys, 4:string payload),
+    set<i32> travel_start_step(1:i64 tid, 2:i32 sid, 3:string payload),
+
 }

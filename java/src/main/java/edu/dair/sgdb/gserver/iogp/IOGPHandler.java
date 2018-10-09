@@ -1,6 +1,7 @@
 package edu.dair.sgdb.gserver.iogp;
 
 import edu.dair.sgdb.sengine.DBKey;
+import edu.dair.sgdb.tengine.bfs.bfs;
 import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.gserver.EdgeType;
@@ -20,6 +21,7 @@ public class IOGPHandler extends BaseHandler {
 
     public IOGPHandler(IOGPSrv s) {
         this.inst = s;
+        this.bfs_engine = new bfs(s);
         this.syncEngine = new SyncTravelEngine(s);
     }
 
