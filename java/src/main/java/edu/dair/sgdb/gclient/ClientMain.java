@@ -266,7 +266,7 @@ public class ClientMain {
             case "travel":
                 /*
                     First, Insert all edges.
-
+                */
                 br = new BufferedReader(new FileReader(graphFile));
                 start = System.currentTimeMillis();
                 int line_num = 0;
@@ -294,7 +294,7 @@ public class ClientMain {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                    */
+
                 client.sync();
                 long start_travel = System.currentTimeMillis();
                 GLogger.info("Start Travel on vertex %s", id);
