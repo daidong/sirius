@@ -44,7 +44,7 @@ public class bfs {
             a_lock.lock();
             while (pendings != 0) {
                 try {
-                    a_cond.wait();
+                    a_cond.await();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 } finally {
