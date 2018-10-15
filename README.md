@@ -1,5 +1,5 @@
 <center>
-<h1>iogp database code</h1>
+<h1>Sirius Database</h1>
 </center>
 
 ## Two essential commands you need to build this system:
@@ -24,7 +24,7 @@ make thrift
 Usually, to maintain stability of thrift schema and its corresponding generated artifacts, we seldom run these two targets.
 
 ## Run
-IOGP is packaged with maven and shell script. You need to first unpack the binary distribution, then run the __server.sh__ in ```bin``` directory.
+Sirius is packaged with maven and shell script. You need to first unpack the binary distribution, then run the __server.sh__ in ```bin``` directory.
 ```
 cd release
 cd /bin
@@ -40,7 +40,7 @@ Also, you can run it in a distributed mode, in which case the "-local" parameter
 ```
 sh server.sh start -db [dbFile] -id [ServerId] -type [edgecut/iogp] -srvlist [s1:p1, s2:p2, …]
 ```
-As you can see from parameter "-type", GraphMeta provides multiple types of servers, including Edge-Cut and IOGP. You can choose one of them as server and use corresponding clients to interact with the servers.
+As you can see from parameter "-type", GraphMeta provides multiple types of servers, including Vertex-Cut, Edge-Cut, DIDO, GIGA+, and IOGP. You can choose one of them as server and use corresponding clients to interact with the servers.
 
 You can view the output of the program by doing so:
 ```
