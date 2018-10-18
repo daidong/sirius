@@ -191,6 +191,7 @@ public class abfs {
                     int master_id = bi.master_id;
                     String payload = travel_payloads.get(tid);
 
+                    System.out.println("Execute Vertex Book Item: StepId[" + sid + "] - " + bi.uuids);
                     // old code
                     ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
 
@@ -279,6 +280,8 @@ public class abfs {
                     int master_id = bi.master_id;
                     String payload = travel_payloads.get(tid);
 
+                    System.out.println("Execute Edge Book Item: StepId[" + sid + "] - " + bi.uuids);
+
                     ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
 
                     if (sid >= travelPlan.size())
@@ -312,11 +315,11 @@ public class abfs {
                         server_uuid_map.put(s, uuid);
                         uuids.add(uuid);
                     }
-                    rpc_async_travel_report(master_id, tid, sid, uuids, 0);
+                    rpc_async_travel_report(master_id, tid, sid + 1, uuids, 0);
 
                     for (int s : vertex_servers){
                         HashSet<ByteBuffer> keys_set = vertices_and_servers.get(s);
-                        rpc_async_travel_vertices(s, tid, sid, server_uuid_map.get(s), keys_set, master_id, payload);
+                        rpc_async_travel_vertices(s, tid, sid + 1, server_uuid_map.get(s), keys_set, master_id, payload);
                     }
 
                     rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
@@ -326,8 +329,6 @@ public class abfs {
                 }
 
             }
-
-
         }
     }
 
