@@ -19,6 +19,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class abfs {
+
     private AbstractSrv instance;
     HashMap<Long, Set<Long>> running_tasks = null;
     HashMap<Long, Integer> total_steps = null;
@@ -151,18 +152,24 @@ public class abfs {
 
         ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
         this.total_steps.put(tid, travelPlan.size());
-        int master = instance.getLocalIdx();
+        int master_id = instance.getLocalIdx();
         int sid = 0;
 
         List<byte[]> keySet = travelPlan.get(sid).vertexKeyRestrict.values();
         HashMap<Integer, HashSet<ByteBuffer>> servers_store_keys_next_step = get_servers_from_keys_1(keySet);
 
+        Set<Long> uuids = new HashSet<>();
+        HashMap<Integer, Long> server_uuid_map = new HashMap<>();
+        for (int s : servers_store_keys_next_step.keySet()){
+            long uuid = gen_uuid(s);
+            server_uuid_map.put(s, uuid);
+            uuids.add(uuid);
+        }
+        rpc_async_travel_report(master_id, tid, sid, uuids, 0);
+
         for (int s : servers_store_keys_next_step.keySet()) {
             HashSet<ByteBuffer> keys_set = servers_store_keys_next_step.get(s);
-            instance.workerPool.execute(
-                    new abfs.thread_travel_vertices(
-                            tid, sid, payload, keys_set,
-                            instance, s, master));
+            rpc_async_travel_vertices(s, tid, sid, server_uuid_map.get(s), keys_set, master_id, payload);
         }
 
         this.locks.get(tid).wait_until_finish();
@@ -208,13 +215,17 @@ public class abfs {
 
                     Set<Integer> edge_servers = new HashSet<>(edges_and_servers.keySet());
 
+                    Set<Long> uuids = new HashSet<>();
+                    HashMap<Integer, Long> server_uuid_map = new HashMap<>();
+                    for (int s : edge_servers){
+                        long uuid = gen_uuid(s);
+                        server_uuid_map.put(s, uuid);
+                        uuids.add(uuid);
+                    }
+                    rpc_async_travel_report(master_id, tid, sid, uuids, 0);
                     for (int s : edge_servers){
                         HashSet<ByteBuffer> keys_set = edges_and_servers.get(s);
-                        instance.workerPool.execute(
-                                new abfs.thread_travel_edges(
-                                        tid, sid, payload, keys_set,
-                                        instance, s, master_id)
-                        );
+                        rpc_async_travel_edges(s, tid, sid, server_uuid_map.get(s), keys_set, master_id, payload);
                     }
                     rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
 
@@ -294,13 +305,20 @@ public class abfs {
                     }
                     Set <Integer> vertex_servers = new HashSet<>(vertices_and_servers.keySet());
 
+                    Set<Long> uuids = new HashSet<>();
+                    HashMap<Integer, Long> server_uuid_map = new HashMap<>();
+                    for (int s : vertex_servers){
+                        long uuid = gen_uuid(s);
+                        server_uuid_map.put(s, uuid);
+                        uuids.add(uuid);
+                    }
+                    rpc_async_travel_report(master_id, tid, sid, uuids, 0);
+
                     for (int s : vertex_servers){
                         HashSet<ByteBuffer> keys_set = vertices_and_servers.get(s);
-                        instance.workerPool.execute(
-                                new abfs.thread_travel_vertices(
-                                        tid, sid + 1, payload, keys_set, instance, s, master_id)
-                        );
+                        rpc_async_travel_vertices(s, tid, sid, server_uuid_map.get(s), keys_set, master_id, payload);
                     }
+
                     rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
 
                 } catch (InterruptedException e) {
@@ -399,67 +417,7 @@ public class abfs {
             e.printStackTrace();
         }
     }
-
-    private class thread_travel_edges implements Runnable{
-
-        long tid, timestamp;
-        int sid, server_id, master_id;
-        String payload;
-        HashSet<ByteBuffer> keys;
-        AbstractSrv instance;
-
-        public thread_travel_edges(long tid, int sid, String payload, HashSet<ByteBuffer> keys,
-                                   AbstractSrv inst, int server_id, int master){
-            this.tid = tid;
-            this.sid = sid;
-            this.payload = payload;
-            this.keys = keys;
-            this.server_id = server_id;
-            this.instance = inst;
-            this.master_id = master;
-            this.timestamp = System.currentTimeMillis();
-        }
-        @Override
-        public void run() {
-            long uuid = gen_uuid(server_id);
-            Set<Long> uuids = new HashSet<>();
-            uuids.add(uuid);
-            rpc_async_travel_report(this.master_id, tid, sid, uuids, 0);
-            rpc_async_travel_edges(server_id, tid, sid, uuid, this.keys, this.master_id, payload);
-        }
-    }
-
-    private class thread_travel_vertices implements Runnable{
-
-        long tid, timestamp;
-        int sid, server_id, master_id;
-        String payload;
-        HashSet<ByteBuffer> keys;
-        AbstractSrv instance;
-
-        public thread_travel_vertices(long tid, int sid, String payload, HashSet<ByteBuffer> keys,
-                                      AbstractSrv inst, int server_id, int master){
-            this.tid = tid;
-            this.sid = sid;
-            this.payload = payload;
-            this.keys = keys;
-            this.server_id = server_id;
-            this.instance = inst;
-            this.master_id = master;
-            this.timestamp = System.currentTimeMillis();
-        }
-
-        @Override
-        public void run() {
-            long uuid = gen_uuid(server_id);
-            Set<Long> uuids = new HashSet<>();
-            uuids.add(uuid);
-            rpc_async_travel_report(this.master_id, tid, sid, uuids, 0);
-            rpc_async_travel_vertices(server_id, tid, sid, uuid, this.keys, this.master_id, payload);
-        }
-    }
-
-
+    
     // Helper functions
     private ArrayList<SingleStep> build_travel_plan_from_json_string(String payloadString) {
         JSONCommand js = new JSONCommand();
