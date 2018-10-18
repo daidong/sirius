@@ -177,6 +177,7 @@ public class ServerMain {
         }
 
         //using ExecutorService to block ServerMain thread is more elegant and more manageable.
+        /*
         ExecutorService executor = Executors.newFixedThreadPool(10);
         File handle = new File(stopSign);
         while (true) {
@@ -194,8 +195,7 @@ public class ServerMain {
             } catch (InterruptedException e) {
 
             }
-
         }
-
+        */
     }
 }

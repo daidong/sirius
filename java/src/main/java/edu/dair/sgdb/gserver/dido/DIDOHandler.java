@@ -3,6 +3,7 @@ package edu.dair.sgdb.gserver.dido;
 import edu.dair.sgdb.gserver.BaseHandler;
 import edu.dair.sgdb.partitioner.DIDOIndex;
 import edu.dair.sgdb.sengine.DBKey;
+import edu.dair.sgdb.tengine.abfs.abfs;
 import edu.dair.sgdb.tengine.async.AsyncTravelEngine;
 import edu.dair.sgdb.tengine.bfs.bfs;
 import edu.dair.sgdb.tengine.sync.SyncTravelEngine;
@@ -33,6 +34,7 @@ public class DIDOHandler extends BaseHandler {
     public DIDOHandler(DIDOSrv s) {
         this.instance = s;
         this.bfs_engine = new bfs(s);
+        this.abfs_engine = new abfs(s);
         this.syncEngine = new SyncTravelEngine(s);
         this.asyncEngine = new AsyncTravelEngine(s);
     }

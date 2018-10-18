@@ -152,8 +152,23 @@ public abstract class AbstractClt {
         JSONCommand jc = new JSONCommand();
         jc.add("travel_payload", array);
         int serverId = Math.abs((int) travelId) % this.serverNum;
-        getClientConn(serverId).travel_master(travelId, jc.genString());
-        return 0;
+        return getClientConn(serverId).travel_master(travelId, jc.genString());
+    }
+
+    public int abfs_travel(List<SingleStep> travelPlan) throws TException {
+        long ts = System.currentTimeMillis();
+        long travelId = ts;
+
+        JSONArray array = new JSONArray();
+        for (SingleStep ss : travelPlan) {
+            JSONObject jo = new JSONObject();
+            jo.put("value", ss.genJSON());
+            array.add(jo);
+        }
+        JSONCommand jc = new JSONCommand();
+        jc.add("travel_payload", array);
+        int serverId = Math.abs((int) travelId) % this.serverNum;
+        return getClientConn(serverId).async_travel_master(travelId, jc.genString());
     }
 
     protected int getHashLocation(byte[] src, int serverNum) {

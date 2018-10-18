@@ -1,0 +1,490 @@
+package edu.dair.sgdb.tengine.abfs;
+
+import edu.dair.sgdb.gserver.AbstractSrv;
+import edu.dair.sgdb.tengine.TravelLocalReader;
+import edu.dair.sgdb.tengine.travel.JSONCommand;
+import edu.dair.sgdb.tengine.travel.SingleStep;
+import edu.dair.sgdb.thrift.TGraphFSServer;
+import edu.dair.sgdb.utils.NIOHelper;
+import org.apache.thrift.TException;
+import org.apache.thrift.transport.TTransportException;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import java.nio.ByteBuffer;
+import java.util.*;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class abfs {
+    private AbstractSrv instance;
+    HashMap<Long, Set<Long>> running_tasks = null;
+    HashMap<Long, Integer> total_steps = null;
+    HashMap<Long, String> travel_payloads = null;
+    HashMap<Long, lock_and_wait> locks = null;
+    Lock lock_to_travels = null;
+
+    PriorityBlockingQueue<BookItem> vertex_book;
+    Lock lock_to_vertex_books = null;
+    PriorityBlockingQueue<BookItem> edge_book;
+    Lock lock_to_edge_books = null;
+
+    private class lock_and_wait{
+        Lock a_lock;
+        Condition a_cond;
+        boolean finished;
+
+        public lock_and_wait(){
+            a_lock = new ReentrantLock();
+            a_cond = a_lock.newCondition();
+            this.finished = false;
+        }
+
+        public void wait_until_finish(){
+            a_lock.lock();
+            while (finished == false) {
+                try {
+                    a_cond.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    a_lock.unlock();
+                }
+            }
+        }
+
+        public void finish(){
+            a_lock.lock();
+            if (finished == finished){
+                finished = true;
+                a_cond.signal();
+            }
+            a_lock.unlock();
+        }
+
+        public void lock(){
+            a_lock.lock();
+        }
+        public void unlock(){
+            a_lock.unlock();
+        }
+    }
+
+    private class BookItem implements Comparable<BookItem>{
+        Set<ByteBuffer> keys;
+        long tid;
+        int sid, master_id;
+        Set<Long> uuids;
+        public BookItem(long tid, int sid, long uuid, Set<ByteBuffer> keys, int master_id){
+            this.tid = tid;
+            this.sid = sid;
+            this.uuids = new HashSet<>();
+            this.uuids.add(uuid);
+            this.keys = keys;
+            this.master_id = master_id;
+        }
+        public void add_uuid(long uuid){
+            this.uuids.add(uuid);
+        }
+        public void add_keys(Set<ByteBuffer> k){
+            this.keys.addAll(k);
+        }
+
+        @Override
+        public int compareTo(BookItem o) {
+            if (this.tid < o.tid) return -1;
+            else if (this.tid == o.tid){
+                if (this.sid < o.sid) return -1;
+                else if (this.sid == o.sid) return 0;
+                else return 1;
+            }
+            else return 1;
+        }
+    }
+
+    public abfs(AbstractSrv srv){
+        this.instance = srv;
+        this.running_tasks = new HashMap<>();
+        this.total_steps = new HashMap<>();
+        this.travel_payloads = new HashMap<>();
+        this.lock_to_travels = new ReentrantLock();
+        this.locks = new HashMap<>();
+
+        this.vertex_book = new PriorityBlockingQueue<BookItem>();
+        this.lock_to_vertex_books = new ReentrantLock();
+        this.edge_book = new PriorityBlockingQueue<BookItem>();
+        this.lock_to_edge_books = new ReentrantLock();
+
+        for (int i = 0; i < 1; i++) {
+            this.instance.workerPool.execute(new check_vertex_book());
+            this.instance.workerPool.execute(new check_edge_book());
+        }
+    }
+
+    /* code derived from javasnowflake (github) */
+    private long gen_uuid(int machine_id){
+        final long sequenceBits = 12;
+        final long datacenterIdBits = 10L;
+        final long datacenterIdShift = sequenceBits;
+        final long timestampLeftShift = sequenceBits + datacenterIdBits;
+
+        final long sequenceMax = 4096;
+        final long twepoch = 1288834974657L;
+        long sequence = 0L;
+
+        long timestamp = System.currentTimeMillis();
+        sequence = (sequence + 1) % sequenceMax;
+        Long id = ((timestamp - twepoch) << timestampLeftShift) |
+                (machine_id << datacenterIdShift) |
+                sequence;
+        return id;
+    }
+
+
+    public int async_travel_master(long tid, String payload){
+        long abfs_start = System.currentTimeMillis();
+
+        this.locks.put(tid, new lock_and_wait());
+        this.travel_payloads.put(tid, payload);
+
+        ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
+        this.total_steps.put(tid, travelPlan.size());
+        int master = instance.getLocalIdx();
+        int sid = 0;
+
+        List<byte[]> keySet = travelPlan.get(sid).vertexKeyRestrict.values();
+        HashMap<Integer, HashSet<ByteBuffer>> servers_store_keys_next_step = get_servers_from_keys_1(keySet);
+
+        for (int s : servers_store_keys_next_step.keySet()) {
+            HashSet<ByteBuffer> keys_set = servers_store_keys_next_step.get(s);
+            instance.workerPool.execute(
+                    new abfs.thread_travel_vertices(
+                            tid, sid, payload, keys_set,
+                            instance, s, master));
+        }
+
+        this.locks.get(tid).wait_until_finish();
+
+        int travel_time = (int) (System.currentTimeMillis() - abfs_start);
+        System.out.println("travel time: " + travel_time);
+        return travel_time;
+    }
+
+    private class check_vertex_book implements Runnable{
+        @Override
+        public void run() {
+            while (true){
+                try {
+                    BookItem bi = vertex_book.take(); //wait if no element
+                    long tid = bi.tid;
+                    int sid = bi.sid;
+                    Set<ByteBuffer> keys_param = bi.keys;
+                    int master_id = bi.master_id;
+                    String payload = travel_payloads.get(tid);
+
+                    // old code
+                    ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
+
+                    if (sid >= travelPlan.size()){ //do not continue to access its edges
+                        rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
+                        continue;
+                    }
+
+                    SingleStep currStep = travelPlan.get(sid);
+                    HashSet<ByteBuffer> keys = new HashSet<>(keys_param);
+
+                    ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(instance.localStore, keys, currStep, 0);
+                    HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
+                    for (byte[] v : passedVertices){
+                        Set<Integer> srvs = instance.getEdgeLocs(v);
+                        for (int s : srvs){
+                            if (!edges_and_servers.containsKey(s))
+                                edges_and_servers.put(s, new HashSet<ByteBuffer>());
+                            edges_and_servers.get(s).add(ByteBuffer.wrap(v));
+                        }
+                    }
+
+                    Set<Integer> edge_servers = new HashSet<>(edges_and_servers.keySet());
+
+                    for (int s : edge_servers){
+                        HashSet<ByteBuffer> keys_set = edges_and_servers.get(s);
+                        instance.workerPool.execute(
+                                new abfs.thread_travel_edges(
+                                        tid, sid, payload, keys_set,
+                                        instance, s, master_id)
+                        );
+                    }
+                    rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public int async_travel_vertices(long tid, int sid, Set<ByteBuffer> keys_param,
+                                     long uuid, int master_id, String payload){
+
+        if (!this.travel_payloads.containsKey(tid))
+            this.travel_payloads.put(tid, payload);
+
+        this.lock_to_vertex_books.lock();
+
+        boolean flag = false;
+        for (BookItem b : this.vertex_book){
+            if (b.tid > tid || (b.tid <= tid && b.sid > sid))
+                break;
+
+            if (b.tid == tid && b.sid == sid){
+                b.add_uuid(uuid);
+                b.add_keys(keys_param);
+                flag = true;
+                break;
+            }
+        }
+        this.lock_to_vertex_books.unlock();
+
+        if (!flag) {
+            BookItem bi = new BookItem(tid, sid, uuid, keys_param, master_id);
+            this.vertex_book.offer(bi);
+        }
+
+        return 0;
+    }
+
+    private class check_edge_book implements Runnable{
+
+        @Override
+        public void run() {
+            while (true){
+                try {
+                    BookItem bi = edge_book.take(); //wait if no element
+                    long tid = bi.tid;
+                    int sid = bi.sid;
+                    Set<ByteBuffer> keys = bi.keys;
+                    int master_id = bi.master_id;
+                    String payload = travel_payloads.get(tid);
+
+                    ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
+
+                    if (sid >= travelPlan.size())
+                        continue;
+
+                    SingleStep currStep = travelPlan.get(sid);
+
+                    ArrayList<byte[]> passedVertices = new ArrayList<>();
+                    for (ByteBuffer k : keys)
+                        passedVertices.add(NIOHelper.getActiveArray(k));
+
+                    HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(
+                            instance.localStore, passedVertices, currStep, 0);
+
+                    HashMap<Integer, HashSet<ByteBuffer>> vertices_and_servers = new HashMap<>();
+
+                    for (byte[] v : nextVertices) {
+                        Set<Integer> srvs = instance.getEdgeLocs(v);
+                        for (int s : srvs){
+                            if (!vertices_and_servers.containsKey(s))
+                                vertices_and_servers.put(s, new HashSet<ByteBuffer>());
+                            vertices_and_servers.get(s).add(ByteBuffer.wrap(v));
+                        }
+                    }
+                    Set <Integer> vertex_servers = new HashSet<>(vertices_and_servers.keySet());
+
+                    for (int s : vertex_servers){
+                        HashSet<ByteBuffer> keys_set = vertices_and_servers.get(s);
+                        instance.workerPool.execute(
+                                new abfs.thread_travel_vertices(
+                                        tid, sid + 1, payload, keys_set, instance, s, master_id)
+                        );
+                    }
+                    rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+
+        }
+    }
+
+    public int async_travel_edges(long tid, int sid, Set<ByteBuffer> keys,
+                                  long uuid, int master_id, String payload){
+        if (!this.travel_payloads.containsKey(tid))
+            this.travel_payloads.put(tid, payload);
+
+        this.lock_to_edge_books.lock();
+
+        boolean flag = false;
+        for (BookItem b : this.edge_book){
+            if (b.tid > tid || (b.tid <= tid && b.sid > sid))
+                break;
+
+            if (b.tid == tid && b.sid == sid){
+                b.add_uuid(uuid);
+                b.add_keys(keys);
+                flag = true;
+                break;
+            }
+        }
+        this.lock_to_edge_books.unlock();
+
+        if (!flag) {
+            BookItem bi = new BookItem(tid, sid, uuid, keys, master_id);
+            this.edge_book.offer(bi);
+        }
+        return 0;
+    }
+
+    public int async_travel_report(long tid, int sid, Set<Long> uuids, int type){
+        this.lock_to_travels.lock();
+
+        if (type == 0){  //new task is created
+            if (!running_tasks.containsKey(tid))
+                running_tasks.put(tid, new HashSet<Long>());
+            running_tasks.get(tid).addAll(uuids);
+        } else {
+            running_tasks.get(tid).removeAll(uuids);
+            if (running_tasks.get(tid).isEmpty() && (sid == this.total_steps.get(tid))){
+                this.locks.get(tid).finish();
+            }
+        }
+
+        this.lock_to_travels.unlock();
+        return 0;
+    }
+
+    private void rpc_async_travel_vertices(int server_id, long tid, int sid, long uuid,
+                                          HashSet<ByteBuffer> keys, int master_id, String payload){
+        TGraphFSServer.Client client = null;
+        try {
+            client = instance.getClientConn(server_id);
+            client.async_travel_vertices(tid, sid, keys, uuid, master_id, payload);
+            instance.releaseClientConn(server_id, client);
+        } catch (TTransportException e) {
+            e.printStackTrace();
+        } catch (TException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void rpc_async_travel_edges(int server_id, long tid, int sid, long uuid,
+                                       HashSet<ByteBuffer> keys, int master_id, String payload){
+        TGraphFSServer.Client client = null;
+        try {
+            client = instance.getClientConn(server_id);
+            client.async_travel_edges(tid, sid, keys, uuid, master_id, payload);
+            instance.releaseClientConn(server_id, client);
+        } catch (TTransportException e) {
+            e.printStackTrace();
+        } catch (TException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void rpc_async_travel_report(int server_id, long tid, int sid, Set<Long> uuids, int type){
+        TGraphFSServer.Client client = null;
+        try {
+            client = instance.getClientConn(server_id);
+            client.async_travel_report(tid, sid, uuids, type);
+            instance.releaseClientConn(server_id, client);
+        } catch (TTransportException e) {
+            e.printStackTrace();
+        } catch (TException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private class thread_travel_edges implements Runnable{
+
+        long tid, timestamp;
+        int sid, server_id, master_id;
+        String payload;
+        HashSet<ByteBuffer> keys;
+        AbstractSrv instance;
+
+        public thread_travel_edges(long tid, int sid, String payload, HashSet<ByteBuffer> keys,
+                                   AbstractSrv inst, int server_id, int master){
+            this.tid = tid;
+            this.sid = sid;
+            this.payload = payload;
+            this.keys = keys;
+            this.server_id = server_id;
+            this.instance = inst;
+            this.master_id = master;
+            this.timestamp = System.currentTimeMillis();
+        }
+        @Override
+        public void run() {
+            long uuid = gen_uuid(server_id);
+            Set<Long> uuids = new HashSet<>();
+            uuids.add(uuid);
+            rpc_async_travel_report(this.master_id, tid, sid, uuids, 0);
+            rpc_async_travel_edges(server_id, tid, sid, uuid, this.keys, this.master_id, payload);
+        }
+    }
+
+    private class thread_travel_vertices implements Runnable{
+
+        long tid, timestamp;
+        int sid, server_id, master_id;
+        String payload;
+        HashSet<ByteBuffer> keys;
+        AbstractSrv instance;
+
+        public thread_travel_vertices(long tid, int sid, String payload, HashSet<ByteBuffer> keys,
+                                      AbstractSrv inst, int server_id, int master){
+            this.tid = tid;
+            this.sid = sid;
+            this.payload = payload;
+            this.keys = keys;
+            this.server_id = server_id;
+            this.instance = inst;
+            this.master_id = master;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        @Override
+        public void run() {
+            long uuid = gen_uuid(server_id);
+            Set<Long> uuids = new HashSet<>();
+            uuids.add(uuid);
+            rpc_async_travel_report(this.master_id, tid, sid, uuids, 0);
+            rpc_async_travel_vertices(server_id, tid, sid, uuid, this.keys, this.master_id, payload);
+        }
+    }
+
+
+    // Helper functions
+    private ArrayList<SingleStep> build_travel_plan_from_json_string(String payloadString) {
+        JSONCommand js = new JSONCommand();
+        Map request = js.parse(payloadString);
+        JSONArray payload = (JSONArray) request.get("travel_payload");
+        ArrayList<SingleStep> travelPlan = new ArrayList<>();
+        for (int i = 0; i < payload.size(); i++) {
+            JSONObject idx = (JSONObject) payload.get(i);
+            JSONObject obj = (JSONObject) idx.get("value");
+            SingleStep ss = SingleStep.parseJSON(obj.toString());
+            travelPlan.add(ss);
+        }
+        return travelPlan;
+    }
+
+    private HashMap<Integer, HashSet<ByteBuffer>> get_servers_from_keys_1(List<byte[]> keySet) {
+        HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = new HashMap<>();
+        for (byte[] key : keySet) {
+            Set<Integer> servers = instance.getVertexLoc(key);
+            for (int s : servers) {
+                if (!perServerVertices.containsKey(s))
+                    perServerVertices.put(s, new HashSet<ByteBuffer>());
+                perServerVertices.get(s).add(ByteBuffer.wrap(key));
+            }
+        }
+        return perServerVertices;
+    }
+}

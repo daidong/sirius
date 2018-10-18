@@ -119,4 +119,8 @@ service TGraphFSServer {
     set<binary> travel_edges(1:i64 tid, 2:i32 sid, 3:set<binary> keys, 4:string payload),
     set<i32> travel_start_step(1:i64 tid, 2:i32 sid, 3:string payload),
 
+    i32 async_travel_master(1:i64 tid, 2:string payload),
+    i32 async_travel_vertices(1:i64 tid, 2:i32 sid, 3:set<binary> keys, 4:i64 uuid, 5:i32 master, 6:string payload),
+    i32 async_travel_edges(1:i64 tid, 2:i32 sid, 3:set<binary> keys, 4:i64 uuid, 5:i32 master, 6:string payload),
+    i32 async_travel_report(1:i64 tid, 2:i32 sid, 3:set<i64> uuid, 4:i32 type),
 }

@@ -296,7 +296,6 @@ public class ClientMain {
                 }
 
                 client.sync();
-                long start_travel = System.currentTimeMillis();
                 GLogger.info("Start Travel on vertex %s", id);
                 byte[] bEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
                 GTravel gt = new GTravel();
@@ -305,10 +304,23 @@ public class ClientMain {
                     gt.et(bEdge).next();
                 }
                 gt.v();
-                client.bfs_travel(gt.plan());
-                GLogger.info("bfs takes: %d ms", System.currentTimeMillis() - start_travel);
+                long cost = client.bfs_travel(gt.plan());
+                GLogger.info("bfs takes: %d ms", cost);
                 break;
 
+            case "atravel":
+                client.sync();
+                GLogger.info("Start Async Travel on vertex %s", id);
+                byte[] cEdge = ArrayPrimitives.itob(EdgeType.OUT.get());
+                GTravel agt = new GTravel();
+                agt.v((id).getBytes());
+                for (int i = 0; i < 10; i++) {
+                    agt.et(cEdge).next();
+                }
+                agt.v();
+                cost = client.abfs_travel(agt.plan());
+                GLogger.info("abfs takes: %d ms", cost);
+                break;
             default:
                 System.out.println("Undefined Op!");
 
