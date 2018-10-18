@@ -13,7 +13,6 @@ import org.json.simple.JSONObject;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -27,11 +26,62 @@ public class abfs {
     HashMap<Long, lock_and_wait> locks = null;
     Lock lock_to_travels = null;
 
-    PriorityBlockingQueue<BookItem> vertex_book;
-    Lock lock_to_vertex_books = null;
-    PriorityBlockingQueue<BookItem> edge_book;
-    Lock lock_to_edge_books = null;
+    TravelBook vertex_book;
+    TravelBook edge_book;
 
+    private class TravelBook{
+        PriorityQueue<BookItem> queue = null;
+        Lock a_lock = null;
+        Condition a_cond = null;
+
+        public TravelBook(){
+            a_lock = new ReentrantLock();
+            a_cond = a_lock.newCondition();
+            queue = new PriorityQueue<>();
+        }
+
+        public BookItem wait_for_new_element(){
+            a_lock.lock();
+            //a_lock.lockInterruptibly();
+            try {
+                try {
+                    while (queue.size() == 0)
+                        a_cond.await();
+                } catch (InterruptedException ie){
+                    a_cond.signal();
+                }
+                BookItem x = queue.poll();
+                assert x != null;
+                return x;
+            } finally {
+                a_lock.unlock();
+            }
+        }
+
+        public void add_element(BookItem bi){
+            a_lock.lock();
+            try {
+                boolean flag = false;
+                for (BookItem b : queue) {
+                    if (b.tid > bi.tid || b.sid > bi.sid)
+                        break;
+
+                    if (b.tid == bi.tid && b.sid == bi.sid) {
+                        b.add_uuids(bi.uuids);
+                        b.add_keys(bi.keys);
+                        flag = true;
+                        break;
+                    }
+                }
+                if (!flag) {
+                    queue.offer(bi);
+                }
+                a_cond.signal();
+            } finally {
+                a_lock.unlock();
+            }
+        }
+    }
     private class lock_and_wait{
         Lock a_lock;
         Condition a_cond;
@@ -42,7 +92,6 @@ public class abfs {
             a_cond = a_lock.newCondition();
             this.finished = false;
         }
-
         public void wait_until_finish(){
             a_lock.lock();
             while (finished == false) {
@@ -55,20 +104,12 @@ public class abfs {
                 }
             }
         }
-
         public void finish(){
             a_lock.lock();
-            if (finished == finished){
+            if (finished == false){
                 finished = true;
                 a_cond.signal();
             }
-            a_lock.unlock();
-        }
-
-        public void lock(){
-            a_lock.lock();
-        }
-        public void unlock(){
             a_lock.unlock();
         }
     }
@@ -86,13 +127,12 @@ public class abfs {
             this.keys = keys;
             this.master_id = master_id;
         }
-        public void add_uuid(long uuid){
-            this.uuids.add(uuid);
+        public void add_uuids(Set<Long> uuids){
+            this.uuids.addAll(uuids);
         }
         public void add_keys(Set<ByteBuffer> k){
             this.keys.addAll(k);
         }
-
         @Override
         public int compareTo(BookItem o) {
             if (this.tid < o.tid) return -1;
@@ -113,10 +153,8 @@ public class abfs {
         this.lock_to_travels = new ReentrantLock();
         this.locks = new HashMap<>();
 
-        this.vertex_book = new PriorityBlockingQueue<BookItem>();
-        this.lock_to_vertex_books = new ReentrantLock();
-        this.edge_book = new PriorityBlockingQueue<BookItem>();
-        this.lock_to_edge_books = new ReentrantLock();
+        this.vertex_book = new TravelBook();
+        this.edge_book = new TravelBook();
 
         for (int i = 0; i < 1; i++) {
             this.instance.workerPool.execute(new check_vertex_book());
@@ -182,57 +220,54 @@ public class abfs {
     private class check_vertex_book implements Runnable{
         @Override
         public void run() {
-            while (true){
-                try {
-                    BookItem bi = vertex_book.take(); //wait if no element
-                    long tid = bi.tid;
-                    int sid = bi.sid;
-                    Set<ByteBuffer> keys_param = bi.keys;
-                    int master_id = bi.master_id;
-                    String payload = travel_payloads.get(tid);
+            while (true){      
+                BookItem bi = vertex_book.wait_for_new_element();
+                long tid = bi.tid;
+                int sid = bi.sid;
+                Set<ByteBuffer> keys_param = bi.keys;
+                int master_id = bi.master_id;
+                String payload = travel_payloads.get(tid);
 
-                    System.out.println("Execute Vertex Book Item: StepId[" + sid + "] - " + bi.uuids);
-                    // old code
-                    ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
+                System.out.println("Execute Vertex Book Item: StepId[" + sid + "] - " + bi.uuids);
+                // old code
+                ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
 
-                    if (sid >= travelPlan.size()){ //do not continue to access its edges
-                        rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
-                        continue;
-                    }
-
-                    SingleStep currStep = travelPlan.get(sid);
-                    HashSet<ByteBuffer> keys = new HashSet<>(keys_param);
-
-                    ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(instance.localStore, keys, currStep, 0);
-                    HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
-                    for (byte[] v : passedVertices){
-                        Set<Integer> srvs = instance.getEdgeLocs(v);
-                        for (int s : srvs){
-                            if (!edges_and_servers.containsKey(s))
-                                edges_and_servers.put(s, new HashSet<ByteBuffer>());
-                            edges_and_servers.get(s).add(ByteBuffer.wrap(v));
-                        }
-                    }
-
-                    Set<Integer> edge_servers = new HashSet<>(edges_and_servers.keySet());
-
-                    Set<Long> uuids = new HashSet<>();
-                    HashMap<Integer, Long> server_uuid_map = new HashMap<>();
-                    for (int s : edge_servers){
-                        long uuid = gen_uuid(s);
-                        server_uuid_map.put(s, uuid);
-                        uuids.add(uuid);
-                    }
-                    rpc_async_travel_report(master_id, tid, sid, uuids, 0);
-                    for (int s : edge_servers){
-                        HashSet<ByteBuffer> keys_set = edges_and_servers.get(s);
-                        rpc_async_travel_edges(s, tid, sid, server_uuid_map.get(s), keys_set, master_id, payload);
-                    }
+                if (sid >= travelPlan.size()) { // do not continue to access its edges
                     rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    continue;
                 }
+
+                SingleStep currStep = travelPlan.get(sid);
+                HashSet<ByteBuffer> keys = new HashSet<>(keys_param);
+
+                ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(instance.localStore, keys, currStep,
+                        0);
+                HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
+                for (byte[] v : passedVertices) {
+                    Set<Integer> srvs = instance.getEdgeLocs(v);
+                    for (int s : srvs) {
+                        if (!edges_and_servers.containsKey(s))
+                            edges_and_servers.put(s, new HashSet<ByteBuffer>());
+                        edges_and_servers.get(s).add(ByteBuffer.wrap(v));
+                    }
+                }
+
+                Set<Integer> edge_servers = new HashSet<>(edges_and_servers.keySet());
+
+                Set<Long> uuids = new HashSet<>();
+                HashMap<Integer, Long> server_uuid_map = new HashMap<>();
+                for (int s : edge_servers) {
+                    long uuid = gen_uuid(s);
+                    server_uuid_map.put(s, uuid);
+                    uuids.add(uuid);
+                }
+                rpc_async_travel_report(master_id, tid, sid, uuids, 0);
+                for (int s : edge_servers) {
+                    HashSet<ByteBuffer> keys_set = edges_and_servers.get(s);
+                    rpc_async_travel_edges(s, tid, sid, server_uuid_map.get(s), keys_set, master_id, payload);
+                }
+                rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
+
             }
         }
     }
@@ -242,28 +277,8 @@ public class abfs {
 
         if (!this.travel_payloads.containsKey(tid))
             this.travel_payloads.put(tid, payload);
-
-        this.lock_to_vertex_books.lock();
-
-        boolean flag = false;
-        for (BookItem b : this.vertex_book){
-            if (b.tid > tid || (b.tid <= tid && b.sid > sid))
-                break;
-
-            if (b.tid == tid && b.sid == sid){
-                b.add_uuid(uuid);
-                b.add_keys(keys_param);
-                flag = true;
-                break;
-            }
-        }
-        this.lock_to_vertex_books.unlock();
-
-        if (!flag) {
-            BookItem bi = new BookItem(tid, sid, uuid, keys_param, master_id);
-            this.vertex_book.offer(bi);
-        }
-
+        BookItem bi = new BookItem(tid, sid, uuid, keys_param, master_id);
+        this.vertex_book.add_element(bi);
         return 0;
     }
 
@@ -272,61 +287,56 @@ public class abfs {
         @Override
         public void run() {
             while (true){
-                try {
-                    BookItem bi = edge_book.take(); //wait if no element
-                    long tid = bi.tid;
-                    int sid = bi.sid;
-                    Set<ByteBuffer> keys = bi.keys;
-                    int master_id = bi.master_id;
-                    String payload = travel_payloads.get(tid);
+                BookItem bi = edge_book.wait_for_new_element();
+                long tid = bi.tid;
+                int sid = bi.sid;
+                Set<ByteBuffer> keys = bi.keys;
+                int master_id = bi.master_id;
+                String payload = travel_payloads.get(tid);
 
-                    System.out.println("Execute Edge Book Item: StepId[" + sid + "] - " + bi.uuids);
+                System.out.println("Execute Edge Book Item: StepId[" + sid + "] - " + bi.uuids);
 
-                    ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
+                ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
 
-                    if (sid >= travelPlan.size())
-                        continue;
+                if (sid >= travelPlan.size())
+                    continue;
 
-                    SingleStep currStep = travelPlan.get(sid);
+                SingleStep currStep = travelPlan.get(sid);
 
-                    ArrayList<byte[]> passedVertices = new ArrayList<>();
-                    for (ByteBuffer k : keys)
-                        passedVertices.add(NIOHelper.getActiveArray(k));
+                ArrayList<byte[]> passedVertices = new ArrayList<>();
+                for (ByteBuffer k : keys)
+                    passedVertices.add(NIOHelper.getActiveArray(k));
 
-                    HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(
-                            instance.localStore, passedVertices, currStep, 0);
+                HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(instance.localStore, passedVertices,
+                        currStep, 0);
 
-                    HashMap<Integer, HashSet<ByteBuffer>> vertices_and_servers = new HashMap<>();
+                HashMap<Integer, HashSet<ByteBuffer>> vertices_and_servers = new HashMap<>();
 
-                    for (byte[] v : nextVertices) {
-                        Set<Integer> srvs = instance.getEdgeLocs(v);
-                        for (int s : srvs){
-                            if (!vertices_and_servers.containsKey(s))
-                                vertices_and_servers.put(s, new HashSet<ByteBuffer>());
-                            vertices_and_servers.get(s).add(ByteBuffer.wrap(v));
-                        }
+                for (byte[] v : nextVertices) {
+                    Set<Integer> srvs = instance.getEdgeLocs(v);
+                    for (int s : srvs) {
+                        if (!vertices_and_servers.containsKey(s))
+                            vertices_and_servers.put(s, new HashSet<ByteBuffer>());
+                        vertices_and_servers.get(s).add(ByteBuffer.wrap(v));
                     }
-                    Set <Integer> vertex_servers = new HashSet<>(vertices_and_servers.keySet());
-
-                    Set<Long> uuids = new HashSet<>();
-                    HashMap<Integer, Long> server_uuid_map = new HashMap<>();
-                    for (int s : vertex_servers){
-                        long uuid = gen_uuid(s);
-                        server_uuid_map.put(s, uuid);
-                        uuids.add(uuid);
-                    }
-                    rpc_async_travel_report(master_id, tid, sid + 1, uuids, 0);
-
-                    for (int s : vertex_servers){
-                        HashSet<ByteBuffer> keys_set = vertices_and_servers.get(s);
-                        rpc_async_travel_vertices(s, tid, sid + 1, server_uuid_map.get(s), keys_set, master_id, payload);
-                    }
-
-                    rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
+                Set<Integer> vertex_servers = new HashSet<>(vertices_and_servers.keySet());
+
+                Set<Long> uuids = new HashSet<>();
+                HashMap<Integer, Long> server_uuid_map = new HashMap<>();
+                for (int s : vertex_servers) {
+                    long uuid = gen_uuid(s);
+                    server_uuid_map.put(s, uuid);
+                    uuids.add(uuid);
+                }
+                rpc_async_travel_report(master_id, tid, sid + 1, uuids, 0);
+
+                for (int s : vertex_servers) {
+                    HashSet<ByteBuffer> keys_set = vertices_and_servers.get(s);
+                    rpc_async_travel_vertices(s, tid, sid + 1, server_uuid_map.get(s), keys_set, master_id, payload);
+                }
+
+                rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
 
             }
         }
@@ -336,27 +346,8 @@ public class abfs {
                                   long uuid, int master_id, String payload){
         if (!this.travel_payloads.containsKey(tid))
             this.travel_payloads.put(tid, payload);
-
-        this.lock_to_edge_books.lock();
-
-        boolean flag = false;
-        for (BookItem b : this.edge_book){
-            if (b.tid > tid || (b.tid <= tid && b.sid > sid))
-                break;
-
-            if (b.tid == tid && b.sid == sid){
-                b.add_uuid(uuid);
-                b.add_keys(keys);
-                flag = true;
-                break;
-            }
-        }
-        this.lock_to_edge_books.unlock();
-
-        if (!flag) {
-            BookItem bi = new BookItem(tid, sid, uuid, keys, master_id);
-            this.edge_book.offer(bi);
-        }
+        BookItem bi = new BookItem(tid, sid, uuid, keys, master_id);
+        this.edge_book.add_element(bi);
         return 0;
     }
 
@@ -418,7 +409,7 @@ public class abfs {
             e.printStackTrace();
         }
     }
-    
+
     // Helper functions
     private ArrayList<SingleStep> build_travel_plan_from_json_string(String payloadString) {
         JSONCommand js = new JSONCommand();
