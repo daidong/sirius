@@ -27,6 +27,7 @@ public class abfs {
     Lock lock_to_travels = null;
 
     HashMap<Integer, HashSet<ByteBuffer>> pass_vertices_cache = null;
+    HashMap<Integer, HashSet<ByteBuffer>> sent_vertices_cache = null;
 
     TravelBook vertex_book;
     TravelBook edge_book;
@@ -158,6 +159,7 @@ public class abfs {
         this.edge_book = new TravelBook();
 
         this.pass_vertices_cache = new HashMap<>();
+        this.sent_vertices_cache = new HashMap<>();
 
         for (int i = 0; i < 1; i++) {
             this.instance.workerPool.execute(new check_vertex_book());
@@ -237,7 +239,7 @@ public class abfs {
                 // old code
                 ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
 
-                if (sid >= travelPlan.size()) { // do not continue to access its edges
+                if (sid >= travelPlan.size()) { // reach the last step, stop to access its edges
                     rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
                     continue;
                 }
@@ -257,11 +259,7 @@ public class abfs {
                 ArrayList<byte[]> passedVertices =
                         TravelLocalReader.filterVertices(instance.localStore, keys, currStep,0);
 
-                //add back the cached keys
-                for (ByteBuffer bkey : cached_keys){
-                    byte[] k = NIOHelper.getActiveArray(bkey);
-                    passedVertices.add(k);
-                }
+                //if the vertices has been processed, we do not need to start further traversal from it.
 
                 HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
                 for (byte[] v : passedVertices) {
@@ -330,14 +328,32 @@ public class abfs {
                 HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(
                         instance.localStore, passedVertices, currStep, 0);
 
-                HashMap<Integer, HashSet<ByteBuffer>> vertices_and_servers = new HashMap<>();
+                int before_cache = nextVertices.size();
 
-                for (byte[] v : nextVertices) {
+                // sent_vertices_cache: if we already sent out requests for v1 in step i, we do not do it again.
+                if (!sent_vertices_cache.containsKey(sid))
+                    sent_vertices_cache.put(sid, new HashSet<ByteBuffer>());
+                HashSet<ByteBuffer> vertices_already_sent = sent_vertices_cache.get(sid);
+
+                HashSet<byte[]> next_vertices_after_cache = new HashSet<byte[]>();
+                for (byte[] v : nextVertices){
+                    ByteBuffer k = ByteBuffer.wrap(v);
+                    if (vertices_already_sent.contains(k))
+                        continue;
+                    next_vertices_after_cache.add(v);
+                }
+
+                System.out.println("For Step[" + sid + "], reduce sent vertices by cache: "
+                        + (before_cache - next_vertices_after_cache.size()));
+
+                HashMap<Integer, HashSet<ByteBuffer>> vertices_and_servers = new HashMap<>();
+                for (byte[] v : next_vertices_after_cache) {
                     Set<Integer> srvs = instance.getEdgeLocs(v);
                     for (int s : srvs) {
                         if (!vertices_and_servers.containsKey(s))
                             vertices_and_servers.put(s, new HashSet<ByteBuffer>());
                         vertices_and_servers.get(s).add(ByteBuffer.wrap(v));
+                        vertices_already_sent.add(ByteBuffer.wrap(v));
                     }
                 }
                 Set<Integer> vertex_servers = new HashSet<>(vertices_and_servers.keySet());
@@ -355,7 +371,6 @@ public class abfs {
                     HashSet<ByteBuffer> keys_set = vertices_and_servers.get(s);
                     rpc_async_travel_vertices(s, tid, sid + 1, server_uuid_map.get(s), keys_set, master_id, payload);
                 }
-
                 rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
 
             }

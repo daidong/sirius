@@ -21,12 +21,48 @@ public class bfs {
 
     private AbstractSrv instance;
     HashMap<Long, HashSet<ByteBuffer>> vertices_to_travel = null;
-    Lock vertices_to_travel_lock = null;
+    Lock lock_vertices_to_travel = null;
+
+    HashSet<ByteBuffer> preloaded_caches = null;
+    Thread preload_thread = null;
 
     public bfs(AbstractSrv inst){
         this.instance = inst;
         this.vertices_to_travel = new HashMap<>();
-        this.vertices_to_travel_lock = new ReentrantLock();
+        this.lock_vertices_to_travel = new ReentrantLock();
+
+        this.preloaded_caches = new HashSet<ByteBuffer>();
+    }
+
+    public class thread_prefetcher extends Thread {
+        int sid;
+        Set<ByteBuffer> keys;
+        String payload;
+
+        public thread_prefetcher(int sid, Set<ByteBuffer> keys, String payload){
+            this.sid = sid;
+            this.keys = keys;
+            this.payload = payload;
+        }
+
+        //while next step has not started, load data into the cache.
+        @Override
+        public void run() {
+            ArrayList<byte[]> passedVertices = null;
+            try {
+                ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
+                SingleStep currStep = travelPlan.get(sid);
+                passedVertices = TravelLocalReader.filterVertices_interruptable(instance.localStore, keys, currStep, 0, this);
+            } catch (InterruptedException e) {
+                System.out.println("Prefetch Thread is stopped");
+            } finally {
+                if (passedVertices != null) {
+                    for (byte[] v : passedVertices) {
+                        preloaded_caches.add(ByteBuffer.wrap(v));
+                    }
+                }
+            }
+        }
     }
 
     private class lock_and_wait{
@@ -75,7 +111,6 @@ public class bfs {
 
         this.vertices_to_travel.put(tid, new HashSet<ByteBuffer>());
         ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
-        int master = instance.getLocalIdx();
         int current_step = 0;
 
         List<byte[]> keySet = travelPlan.get(current_step).vertexKeyRestrict.values();
@@ -88,9 +123,8 @@ public class bfs {
 
         Set<Integer> servers_list_2 = new HashSet<>(servers_store_keys_next_step.keySet());
 
-
         while (current_step < travelPlan.size()){
-            System.out.println("start step " + current_step);
+            //System.out.println("start step " + current_step);
 
             Set<Integer> servers_list_1 = new HashSet<>(servers_list_2);
             servers_list_2.clear();
@@ -106,7 +140,7 @@ public class bfs {
             }
 
             lw.wait_until_finish();
-            System.out.println("finish step " + current_step);
+            //System.out.println("finish step " + current_step);
             current_step += 1;
         }
 
@@ -116,11 +150,15 @@ public class bfs {
     }
 
     public int travel_vertices(long tid, int sid, Set<ByteBuffer> keys, String payload){
-        vertices_to_travel_lock.lock();
+        lock_vertices_to_travel.lock();
         if (!this.vertices_to_travel.containsKey(tid))
             this.vertices_to_travel.put(tid, new HashSet<ByteBuffer>());
         this.vertices_to_travel.get(tid).addAll(keys);
-        vertices_to_travel_lock.unlock();
+        lock_vertices_to_travel.unlock();
+
+        // start a thread to do some prefetching before travel_start_step arrives
+        this.preload_thread = new thread_prefetcher(sid, keys, payload);
+        instance.workerPool.execute(this.preload_thread);
         return 0;
     }
 
@@ -132,10 +170,8 @@ public class bfs {
         for (ByteBuffer k : keys)
             passedVertices.add(NIOHelper.getActiveArray(k));
 
-        HashMap<Integer, HashSet<ByteBuffer>> perServerVertices = new HashMap<>();
         HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(
                 this.instance.localStore, passedVertices, currStep, 0);
-
 
         HashSet<ByteBuffer> next_vertices = new HashSet<>();
         for (byte[] v : nextVertices)
@@ -145,10 +181,28 @@ public class bfs {
     }
 
     public HashSet<Integer> travel_start_step(long tid, int sid, String payload){
+        
+        // shutdown the prefetcher
+        assert this.preload_thread != null;
+        this.preload_thread.interrupt();
+
         ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
         SingleStep currStep = travelPlan.get(sid);
         HashSet<ByteBuffer> keys = this.vertices_to_travel.get(tid);
+        int before_checking_cache = keys.size();
+
+        // read data from cache first. 
+        keys.removeAll(this.preloaded_caches);
+        System.out.println("For Step[" + sid + "], read preloaded data: "
+                        + (before_checking_cache - keys.size()));
+
         ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(instance.localStore, keys, currStep, 0);
+
+        // add back preloaded vertices, so that the passedVertices has all vertices for current step.
+        for (ByteBuffer bb : this.preloaded_caches){
+            passedVertices.add(NIOHelper.getActiveArray(bb));
+        }
+
         HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
         for (byte[] v : passedVertices){
             Set<Integer> srvs = instance.getEdgeLocs(v);
@@ -295,17 +349,6 @@ public class bfs {
 
             lw.finish_one();
         }
-    }
-    private String gen_json_string_from_travel_plan(ArrayList<SingleStep> travelPlan) {
-        JSONArray array = new JSONArray();
-        for (SingleStep ss : travelPlan) {
-            JSONObject jo = new JSONObject();
-            jo.put("value", ss.genJSON());
-            array.add(jo);
-        }
-        JSONCommand jc = new JSONCommand();
-        jc.add("travel_payload", array);
-        return jc.genString();
     }
 
     private ArrayList<SingleStep> build_travel_plan_from_json_string(String payloadString) {
