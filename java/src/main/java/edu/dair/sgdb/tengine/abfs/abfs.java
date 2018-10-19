@@ -26,6 +26,8 @@ public class abfs {
     HashMap<Long, lock_and_wait> locks = null;
     Lock lock_to_travels = null;
 
+    HashMap<Integer, HashSet<ByteBuffer>> pass_vertices_cache = null;
+
     TravelBook vertex_book;
     TravelBook edge_book;
 
@@ -113,7 +115,6 @@ public class abfs {
             a_lock.unlock();
         }
     }
-
     private class BookItem implements Comparable<BookItem>{
         Set<ByteBuffer> keys;
         long tid;
@@ -155,6 +156,8 @@ public class abfs {
 
         this.vertex_book = new TravelBook();
         this.edge_book = new TravelBook();
+
+        this.pass_vertices_cache = new HashMap<>();
 
         for (int i = 0; i < 1; i++) {
             this.instance.workerPool.execute(new check_vertex_book());
@@ -213,7 +216,8 @@ public class abfs {
         this.locks.get(tid).wait_until_finish();
 
         int travel_time = (int) (System.currentTimeMillis() - abfs_start);
-        System.out.println("travel time: " + travel_time);
+        System.out.println("abfs travel time: " + travel_time);
+
         return travel_time;
     }
 
@@ -229,6 +233,7 @@ public class abfs {
                 String payload = travel_payloads.get(tid);
 
                 System.out.println("Execute Vertex Book Item: StepId[" + sid + "] - " + bi.uuids);
+
                 // old code
                 ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
 
@@ -239,9 +244,25 @@ public class abfs {
 
                 SingleStep currStep = travelPlan.get(sid);
                 HashSet<ByteBuffer> keys = new HashSet<>(keys_param);
+                int before_checking_cache = keys.size();
 
-                ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(instance.localStore, keys, currStep,
-                        0);
+                //before actually accessing the disk data, try to look at the cache first.
+                if (!pass_vertices_cache.containsKey(sid))
+                    pass_vertices_cache.put(sid, new HashSet<ByteBuffer>());
+                HashSet<ByteBuffer> cached_keys = pass_vertices_cache.get(sid);
+                keys.removeAll(cached_keys);  //we do not check cached vertices anymore
+                System.out.println("For Step[" + sid + "], read cached data: "
+                        + (before_checking_cache - keys.size()));
+
+                ArrayList<byte[]> passedVertices =
+                        TravelLocalReader.filterVertices(instance.localStore, keys, currStep,0);
+
+                //add back the cached keys
+                for (ByteBuffer bkey : cached_keys){
+                    byte[] k = NIOHelper.getActiveArray(bkey);
+                    passedVertices.add(k);
+                }
+
                 HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
                 for (byte[] v : passedVertices) {
                     Set<Integer> srvs = instance.getEdgeLocs(v);
@@ -249,6 +270,7 @@ public class abfs {
                         if (!edges_and_servers.containsKey(s))
                             edges_and_servers.put(s, new HashSet<ByteBuffer>());
                         edges_and_servers.get(s).add(ByteBuffer.wrap(v));
+                        cached_keys.add(ByteBuffer.wrap(v));
                     }
                 }
 
@@ -267,7 +289,6 @@ public class abfs {
                     rpc_async_travel_edges(s, tid, sid, server_uuid_map.get(s), keys_set, master_id, payload);
                 }
                 rpc_async_travel_report(master_id, tid, sid, bi.uuids, 1);
-
             }
         }
     }
@@ -283,7 +304,6 @@ public class abfs {
     }
 
     private class check_edge_book implements Runnable{
-
         @Override
         public void run() {
             while (true){
@@ -307,8 +327,8 @@ public class abfs {
                 for (ByteBuffer k : keys)
                     passedVertices.add(NIOHelper.getActiveArray(k));
 
-                HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(instance.localStore, passedVertices,
-                        currStep, 0);
+                HashSet<byte[]> nextVertices = TravelLocalReader.scanLocalEdges(
+                        instance.localStore, passedVertices, currStep, 0);
 
                 HashMap<Integer, HashSet<ByteBuffer>> vertices_and_servers = new HashMap<>();
 
