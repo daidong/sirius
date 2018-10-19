@@ -1,6 +1,5 @@
 package edu.dair.sgdb.tengine;
 
-import edu.dair.sgdb.tengine.bfs.bfs.thread_prefetcher;
 import edu.dair.sgdb.tengine.travel.Restriction;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.gserver.EdgeType;

@@ -30,7 +30,6 @@ public class bfs {
         this.instance = inst;
         this.vertices_to_travel = new HashMap<>();
         this.lock_vertices_to_travel = new ReentrantLock();
-
         this.preloaded_caches = new HashSet<ByteBuffer>();
     }
 
@@ -124,7 +123,7 @@ public class bfs {
         Set<Integer> servers_list_2 = new HashSet<>(servers_store_keys_next_step.keySet());
 
         while (current_step < travelPlan.size()){
-            //System.out.println("start step " + current_step);
+            System.out.println("start step " + current_step);
 
             Set<Integer> servers_list_1 = new HashSet<>(servers_list_2);
             servers_list_2.clear();
@@ -140,7 +139,7 @@ public class bfs {
             }
 
             lw.wait_until_finish();
-            //System.out.println("finish step " + current_step);
+            System.out.println("finish step " + current_step);
             current_step += 1;
         }
 
@@ -191,10 +190,21 @@ public class bfs {
         HashSet<ByteBuffer> keys = this.vertices_to_travel.get(tid);
         int before_checking_cache = keys.size();
 
-        // read data from cache first. 
+        // read data from preloaded data cache first; clear its content as we will not use it anymore
         keys.removeAll(this.preloaded_caches);
         System.out.println("For Step[" + sid + "], read preloaded data: "
                         + (before_checking_cache - keys.size()));
+        //this.preloaded_caches.clear();
+
+        System.out.println("In travel_start_step, local id is: " + instance.getLocalIdx());
+        // @test: manually add some latency on server 1
+        if (instance.getLocalIdx() == 1) {
+            try {
+                Thread.sleep(10);
+                System.out.println("Read Vertices Delayed");
+            } catch (InterruptedException ie) {
+            }
+        }
 
         ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(instance.localStore, keys, currStep, 0);
 
