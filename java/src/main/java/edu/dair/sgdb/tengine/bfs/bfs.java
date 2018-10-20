@@ -23,14 +23,20 @@ public class bfs {
     HashMap<Long, HashSet<ByteBuffer>> vertices_to_travel = null;
     Lock lock_vertices_to_travel = null;
 
+    boolean preload_enabled = true;
     HashSet<ByteBuffer> preloaded_caches = null;
-    Thread preload_thread = null;
+    Lock lock_preloaded_caches = null;
+    ArrayList<Thread> preload_threads = null;
+
+    boolean manual_delay = false;
 
     public bfs(AbstractSrv inst){
         this.instance = inst;
         this.vertices_to_travel = new HashMap<>();
         this.lock_vertices_to_travel = new ReentrantLock();
         this.preloaded_caches = new HashSet<ByteBuffer>();
+        this.lock_preloaded_caches = new ReentrantLock();
+        this.preload_threads = new ArrayList<>();
     }
 
     public class thread_prefetcher extends Thread {
@@ -55,11 +61,13 @@ public class bfs {
             } catch (InterruptedException e) {
                 System.out.println("Prefetch Thread is stopped");
             } finally {
+                lock_preloaded_caches.lock();
                 if (passedVertices != null) {
                     for (byte[] v : passedVertices) {
                         preloaded_caches.add(ByteBuffer.wrap(v));
                     }
                 }
+                lock_preloaded_caches.unlock();
             }
         }
     }
@@ -125,7 +133,7 @@ public class bfs {
         while (current_step < travelPlan.size()){
             System.out.println("start step " + current_step);
 
-            Set<Integer> servers_list_1 = new HashSet<>(servers_list_2);
+            HashSet<Integer> servers_list_1 = new HashSet<>(servers_list_2);
             servers_list_2.clear();
 
             int pending_to_finish = servers_list_1.size();
@@ -155,9 +163,16 @@ public class bfs {
         this.vertices_to_travel.get(tid).addAll(keys);
         lock_vertices_to_travel.unlock();
 
-        // start a thread to do some prefetching before travel_start_step arrives
-        this.preload_thread = new thread_prefetcher(sid, keys, payload);
-        instance.workerPool.execute(this.preload_thread);
+        if (preload_enabled) {
+            /* start a thread to do some prefetching before travel_start_step arrives
+             * @reminder: we copy keys to the thread to avoid conflict because other threads may change
+             *            this.vertices_to_travel during prefetching.
+             */
+            Thread t = new thread_prefetcher(sid, new HashSet<ByteBuffer>(keys), payload);
+            this.preload_threads.add(t);
+            t.start();
+        }
+
         return 0;
     }
 
@@ -182,35 +197,44 @@ public class bfs {
     public HashSet<Integer> travel_start_step(long tid, int sid, String payload){
         
         // shutdown the prefetcher
-        assert this.preload_thread != null;
-        this.preload_thread.interrupt();
+        for (Thread t : this.preload_threads) {
+            t.interrupt();
+        }
+        this.preload_threads.clear();
 
         ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
         SingleStep currStep = travelPlan.get(sid);
         HashSet<ByteBuffer> keys = this.vertices_to_travel.get(tid);
         int before_checking_cache = keys.size();
 
-        // read data from preloaded data cache first; clear its content as we will not use it anymore
-        keys.removeAll(this.preloaded_caches);
-        System.out.println("For Step[" + sid + "], read preloaded data: "
-                        + (before_checking_cache - keys.size()));
-        //this.preloaded_caches.clear();
+        if (preload_enabled) {
+            // when we can grab the lock, this indicates the prefetch thread has successfully exited.
+            this.lock_preloaded_caches.lock();
+            /* read data from preloaded data cache first */
+            keys.removeAll(this.preloaded_caches);
+            this.lock_preloaded_caches.unlock();
+            System.out.println("For Step[" + sid + "], read preloaded data: "
+                    + (before_checking_cache - keys.size()));
+        }
 
-        System.out.println("In travel_start_step, local id is: " + instance.getLocalIdx());
-        // @test: manually add some latency on server 1
-        if (instance.getLocalIdx() == 1) {
-            try {
-                Thread.sleep(10);
-                System.out.println("Read Vertices Delayed");
-            } catch (InterruptedException ie) {
+        if (manual_delay) {
+            // @test: manually add some latency on servers based on current step.
+            if (instance.getLocalIdx() == (sid % instance.serverNum)) {
+                try {
+                    Thread.sleep(10);
+                    System.out.println("Read Vertices Delayed");
+                } catch (InterruptedException ie) {
+                }
             }
         }
 
         ArrayList<byte[]> passedVertices = TravelLocalReader.filterVertices(instance.localStore, keys, currStep, 0);
 
-        // add back preloaded vertices, so that the passedVertices has all vertices for current step.
-        for (ByteBuffer bb : this.preloaded_caches){
-            passedVertices.add(NIOHelper.getActiveArray(bb));
+        if (preload_enabled) {
+            // add back preloaded vertices, so that the passedVertices has all vertices for current step.
+            for (ByteBuffer bb : this.preloaded_caches) {
+                passedVertices.add(NIOHelper.getActiveArray(bb));
+            }
         }
 
         HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
@@ -236,13 +260,23 @@ public class bfs {
 
         lw.wait_until_finish();
 
+        HashSet<Integer> next_vertices = new HashSet<>();
+
         HashMap<Integer, HashSet<ByteBuffer>> servers_and_keys = get_servers_from_keys_2(vertices_for_next_step);
         for (int s : servers_and_keys.keySet()) {
+            next_vertices.add(s);
             HashSet<ByteBuffer> keys_set = servers_and_keys.get(s);
             rpc_sync_travel_vertices(s, tid, sid, keys_set, payload);
         }
 
-        return (HashSet<Integer>) edge_servers;
+        if (preload_enabled) {
+            //clear the preloaded_caches
+            this.lock_preloaded_caches.lock();
+            this.preloaded_caches.clear();
+            this.lock_preloaded_caches.unlock();
+        }
+
+        return next_vertices;
     }
 
 

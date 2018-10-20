@@ -32,6 +32,8 @@ public class abfs {
     TravelBook vertex_book;
     TravelBook edge_book;
 
+    boolean manual_delay = false;
+
     private class TravelBook{
         PriorityQueue<BookItem> queue = null;
         Lock a_lock = null;
@@ -259,7 +261,7 @@ public class abfs {
                 ArrayList<byte[]> passedVertices =
                         TravelLocalReader.filterVertices(instance.localStore, keys, currStep,0);
 
-                //if the vertices has been processed, we do not need to start further traversal from it.
+                //if the vertices has been processed, we do not need to further traversal from it.
 
                 HashMap<Integer, HashSet<ByteBuffer>> edges_and_servers = new HashMap<>();
                 for (byte[] v : passedVertices) {
