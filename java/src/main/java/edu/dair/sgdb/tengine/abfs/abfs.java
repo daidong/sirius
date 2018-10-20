@@ -5,6 +5,7 @@ import edu.dair.sgdb.tengine.TravelLocalReader;
 import edu.dair.sgdb.tengine.travel.JSONCommand;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.thrift.TGraphFSServer;
+import edu.dair.sgdb.utils.GLogger;
 import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
@@ -220,8 +221,7 @@ public class abfs {
         this.locks.get(tid).wait_until_finish();
 
         int travel_time = (int) (System.currentTimeMillis() - abfs_start);
-        System.out.println("abfs travel time: " + travel_time);
-
+        GLogger.info("abfs travel time: %d", travel_time);
         return travel_time;
     }
 
@@ -236,7 +236,7 @@ public class abfs {
                 int master_id = bi.master_id;
                 String payload = travel_payloads.get(tid);
 
-                System.out.println("Execute Vertex Book Item: StepId[" + sid + "] - " + bi.uuids);
+                GLogger.info("Scan Vertex BookItem on StepId[%d]", sid);
 
                 // old code
                 ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
@@ -255,8 +255,7 @@ public class abfs {
                     pass_vertices_cache.put(sid, new HashSet<ByteBuffer>());
                 HashSet<ByteBuffer> cached_keys = pass_vertices_cache.get(sid);
                 keys.removeAll(cached_keys);  //we do not check cached vertices anymore
-                System.out.println("For Step[" + sid + "], read cached data: "
-                        + (before_checking_cache - keys.size()));
+                GLogger.info("Step[%d] read cached data: %d", sid, (before_checking_cache - keys.size()));
 
                 ArrayList<byte[]> passedVertices =
                         TravelLocalReader.filterVertices(instance.localStore, keys, currStep,0);
@@ -314,7 +313,7 @@ public class abfs {
                 int master_id = bi.master_id;
                 String payload = travel_payloads.get(tid);
 
-                System.out.println("Execute Edge Book Item: StepId[" + sid + "] - " + bi.uuids);
+                GLogger.info("Scan Edge BookItem on Step[%d]", sid);
 
                 ArrayList<SingleStep> travelPlan = build_travel_plan_from_json_string(payload);
 
@@ -345,8 +344,8 @@ public class abfs {
                     next_vertices_after_cache.add(v);
                 }
 
-                System.out.println("For Step[" + sid + "], reduce sent vertices by cache: "
-                        + (before_cache - next_vertices_after_cache.size()));
+                GLogger.info("Step[%d] reduces sent %d vertices using cache",
+                        sid, (before_cache - next_vertices_after_cache.size()));
 
                 HashMap<Integer, HashSet<ByteBuffer>> vertices_and_servers = new HashMap<>();
                 for (byte[] v : next_vertices_after_cache) {

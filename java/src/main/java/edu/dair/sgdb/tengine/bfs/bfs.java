@@ -5,6 +5,7 @@ import edu.dair.sgdb.tengine.TravelLocalReader;
 import edu.dair.sgdb.tengine.travel.JSONCommand;
 import edu.dair.sgdb.tengine.travel.SingleStep;
 import edu.dair.sgdb.thrift.TGraphFSServer;
+import edu.dair.sgdb.utils.GLogger;
 import edu.dair.sgdb.utils.NIOHelper;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
@@ -59,7 +60,7 @@ public class bfs {
                 SingleStep currStep = travelPlan.get(sid);
                 passedVertices = TravelLocalReader.filterVertices_interruptable(instance.localStore, keys, currStep, 0, this);
             } catch (InterruptedException e) {
-                System.out.println("Prefetch Thread is stopped");
+                GLogger.debug("Prefetch Thread is Stopped");
             } finally {
                 lock_preloaded_caches.lock();
                 if (passedVertices != null) {
@@ -131,7 +132,7 @@ public class bfs {
         Set<Integer> servers_list_2 = new HashSet<>(servers_store_keys_next_step.keySet());
 
         while (current_step < travelPlan.size()){
-            System.out.println("start step " + current_step);
+            GLogger.info("Start Step[%d]", current_step);
 
             HashSet<Integer> servers_list_1 = new HashSet<>(servers_list_2);
             servers_list_2.clear();
@@ -147,12 +148,12 @@ public class bfs {
             }
 
             lw.wait_until_finish();
-            System.out.println("finish step " + current_step);
+            GLogger.info("Finish Step[%d]", current_step);
             current_step += 1;
         }
 
         int travel_time = (int) (System.currentTimeMillis() - bfs_start);
-        System.out.println("travel time: " + travel_time);
+        GLogger.info("Travel Time: %d", travel_time);
         return travel_time;
     }
 
@@ -213,8 +214,7 @@ public class bfs {
             /* read data from preloaded data cache first */
             keys.removeAll(this.preloaded_caches);
             this.lock_preloaded_caches.unlock();
-            System.out.println("For Step[" + sid + "], read preloaded data: "
-                    + (before_checking_cache - keys.size()));
+            GLogger.info("Step[%d] read preloaded data %d", sid, (before_checking_cache - keys.size()));
         }
 
         if (manual_delay) {
@@ -222,7 +222,7 @@ public class bfs {
             if (instance.getLocalIdx() == (sid % instance.serverNum)) {
                 try {
                     Thread.sleep(10);
-                    System.out.println("Read Vertices Delayed");
+                    GLogger.info("Read Vertices Delayed %d ms", 10);
                 } catch (InterruptedException ie) {
                 }
             }

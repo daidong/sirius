@@ -51,10 +51,13 @@ public class ServerExecutable implements Runnable {
                 break;
             case "giga":
                 abstractSrv = new GIGASrv();
+                break;
             case "dido":
                 abstractSrv = new DIDOSrv();
+                break;
             case "vertexcut":
                 abstractSrv = new VertexCutSrv();
+                break;
             default:
                 System.out.println("Undefined Server Type!");
                 break;
